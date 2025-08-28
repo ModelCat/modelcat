@@ -1,0 +1,6 @@
+include tox.ini
+recursive-include src/modelcat *.md
+recursive-include sample_datasets *.jpg
+recursive-include sample_datasets *.json
+recursive-include img *.svg
+recursive-include tests *.py

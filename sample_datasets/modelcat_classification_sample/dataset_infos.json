@@ -1,0 +1,60 @@
+{
+    "modelcat_classification_sample": {
+        "description": "A subset of Kaggle Cats vs Dogs dataset",
+        "citation": "@Inproceedings (Conference){asirra-a-captcha-that-exploits-interest-aligned-manual-image-categorization,\nauthor = {Elson, Jeremy and Douceur, John (JD) and Howell, Jon and Saul, Jared},\ntitle = {Asirra: A CAPTCHA that Exploits Interest-Aligned Manual Image Categorization},\nbooktitle = {Proceedings of 14th ACM Conference on Computer and Communications Security (CCS)},\nyear = {2007},\nmonth = {October},\npublisher = {Association for Computing Machinery, Inc.},\nurl = {https://www.microsoft.com/en-us/research/publication/asirra-a-captcha-that-exploits-interest-aligned-manual-image-categorization/},\nedition = {Proceedings of 14th ACM Conference on Computer and Communications Security (CCS)},\n}",
+        "license": "Community Data License Agreement - Permissive - Version 2.0",
+        "homepage": "https://www.microsoft.com/en-us/download/details.aspx?id=54765",
+        "post_processed": null,
+        "supervised_keys": null,
+        "task_templates": [
+            {
+                "task": "classification",
+                "image_column": "image",
+                "label_column": "label",
+                "labels": [
+                    "cat",
+                    "dog"
+                ]
+            }
+        ],
+        "builder_name": "modelcat_classification_sample",
+        "config_name": "modelcat_classification_sample",
+        "version": {
+            "version_str": "1.0.0",
+            "description": null,
+            "major": 1,
+            "minor": 0,
+            "patch": 1
+        },
+        "splits": {
+            "train": {
+                "name": "train",
+                "num_bytes": 273092,
+                "num_examples": 10,
+                "dataset_name": "coco_train.json"
+            },
+            "validation": {
+                "name": "validation",
+                "num_bytes": 203384,
+                "num_examples": 10,
+                "dataset_name": "coco_validation.json"
+            },
+            "test": {
+                "name": "test",
+                "num_bytes": 263863,
+                "num_examples": 10,
+                "dataset_name": "coco_test.json"
+            }
+        },
+        "download_checksums": {
+            "url/to/download/dataset": {
+                "num_bytes": null,
+                "checksum": null
+            }
+        },
+        "download_size": null,
+        "post_processing_size": null,
+        "dataset_size": 30,
+        "size_in_bytes": 769947
+    }
+}

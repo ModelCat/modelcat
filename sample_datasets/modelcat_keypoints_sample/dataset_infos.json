@@ -1,0 +1,104 @@
+{
+    "modelcat_keypoints_sample": {
+        "description": "A subset of person key-points dataset COCO 2014 train/val",
+        "citation": "@misc{lin2015microsoft, title={Microsoft COCO: Common Objects in Context}, author={Tsung-Yi Lin and Michael Maire and Serge Belongie and Lubomir Bourdev and Ross Girshick and James Hays and Pietro Perona and Deva Ramanan and C. Lawrence Zitnick and Piotr Dollár}, year={2015}, eprint={1405.0312}, archivePrefix={arXiv}, primaryClass={cs.CV}}",
+        "homepage": "https://cocodataset.org/",
+        "license": "Creative Commons Attribution 4.0 License.",
+        "features": {
+            "image": {
+                "id": null,
+                "_type": "Image"
+            },
+            "labels": {
+                "id": null,
+                "_type": "Sequence"
+            },
+            "image/filename": {
+                "id": null,
+                "_type": "Text"
+            },
+            "objects": {
+                "id": null,
+                "_type": "Sequence",
+                "objects_bbox": {
+                    "id": null,
+                    "_type": "BBoxFeature"
+                },
+                "objects_label": {
+                    "id": null,
+                    "num_classes": 1,
+                    "names": [
+                        "person"
+                    ],
+                    "_type": "ClassLabel"
+                },
+                "objects_keypoint": {
+                    "id": null,
+                    "_type": "Sequence"
+                }
+            }
+        },
+        "post_processed": null,
+        "supervised_keys": null,
+        "task_templates": [
+            {
+                "task": "keypoints",
+                "image_column": "image",
+                "label_column": null,
+                "labels": [
+                    "person"
+                ],
+                "annotations": [
+                    "num_keypoints",
+                    "area",
+                    "iscrowd",
+                    "keypoints",
+                    "image_id",
+                    "bbox",
+                    "category_id",
+                    "id"
+                ],
+                "num_keypoints": 8
+            }
+        ],
+        "builder_name": "modelcat_keypoints_sample",
+        "config_name": "modelcat_keypoints_sample",
+        "version": {
+            "version_str": "1.0.1",
+            "description": null,
+            "major": 1,
+            "minor": 0,
+            "patch": 1
+        },
+        "splits": {
+            "train": {
+                "name": "train",
+                "num_bytes": 182727,
+                "num_examples": 10,
+                "dataset_name": "coco_train.json"
+            },
+            "validation": {
+                "name": "validation",
+                "num_bytes": 154804,
+                "num_examples": 10,
+                "dataset_name": "coco_validation.json"
+            },
+            "test": {
+                "name": "test",
+                "num_bytes": 183253,
+                "num_examples": 10,
+                "dataset_name": "coco_test.json"
+            }
+        },
+        "download_checksums": {
+            "url/to/download/dataset": {
+                "num_bytes": null,
+                "checksum": null
+            }
+        },
+        "download_size": null,
+        "post_processing_size": null,
+        "dataset_size": 30,
+        "size_in_bytes": 564931
+    }
+}
