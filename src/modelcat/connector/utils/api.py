@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Union
 
-from modelcat.modelcatconnector.utils.consts import PACKAGE_NAME
+from modelcat.connector.utils.consts import PACKAGE_NAME
 
 
 @dataclass

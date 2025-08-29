@@ -1,7 +1,7 @@
 import logging as log
 import os
 import os.path as osp
-from modelcat.modelcatconnector.utils import hash_dataset, run_cli_command
+from modelcat.connector.utils import hash_dataset, run_cli_command
 import re
 import json
 import math
@@ -11,10 +11,10 @@ import argparse
 from pathlib import Path
 
 from modelcat.consts import PRODUCT_NAME, PRODUCT_S3_BUCKET, PRODUCT_URL
-from modelcat.modelcatconnector.utils.api import APIConfig, ProductAPIClient, APIError
-from modelcat.modelcatconnector.utils.consts import PACKAGE_NAME, DEFAULT_AWS_PROFILE
+from modelcat.connector.utils.api import APIConfig, ProductAPIClient, APIError
+from modelcat.connector.utils.consts import PACKAGE_NAME, DEFAULT_AWS_PROFILE
 
-from modelcat.modelcatconnector.utils.aws import check_aws_configuration, check_s3_access
+from modelcat.connector.utils.aws import check_aws_configuration, check_s3_access
 import pkg_resources
 
 

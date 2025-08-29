@@ -1,13 +1,13 @@
 from modelcat.consts import PRODUCT_NAME, PRODUCT_URL
-from modelcat.modelcatconnector.utils import run_cli_command
-from modelcat.modelcatconnector.utils.consts import (
+from modelcat.connector.utils import run_cli_command
+from modelcat.connector.utils.consts import (
     DEFAULT_AWS_FORMAT,
     DEFAULT_AWS_REGION,
     DEFAULT_AWS_PROFILE,
     PACKAGE_NAME,
 )
-from modelcat.modelcatconnector.utils.api import ProductAPIClient, APIConfig, APIError
-from modelcat.modelcatconnector.utils.aws import check_awscli, check_aws_configuration
+from modelcat.connector.utils.api import ProductAPIClient, APIConfig, APIError
+from modelcat.connector.utils.aws import check_awscli, check_aws_configuration
 from pathlib import Path
 import os.path as osp
 import os
@@ -125,7 +125,7 @@ def run_setup(verbose: int = 0):
     # checking access to S3
     print("Verifying AWS access...")
     # some retries to let the AWS access key propagate
-    from modelcat.modelcatconnector.utils.aws import check_s3_access
+    from modelcat.connector.utils.aws import check_s3_access
     try:
         check_s3_access(group_id, verbose=verbose > 0)
     except Exception:

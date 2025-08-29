@@ -3,7 +3,7 @@ from retry import retry
 from . import run_cli_command, CLICommandError
 import logging as log
 
-from modelcat.modelcatconnector.utils.consts import DEFAULT_AWS_PROFILE
+from modelcat.connector.utils.consts import DEFAULT_AWS_PROFILE
 from modelcat.consts import PRODUCT_NAME, PRODUCT_S3_BUCKET
 
 

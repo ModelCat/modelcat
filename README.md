@@ -42,7 +42,7 @@ pip install modelcat
 
 Currently the following functions are supported:
 * ModelCatConnector for dataset validation and upload to ModelCat. 
-See the [modelcat.connector README](src/modelcat/modelcatconnector/README.md) for details:
+See the [modelcat.connector README](src/modelcat/connector/README.md) for details:
   * Tool setup (one-time only)
   * Dataset validation
   * Dataset upload

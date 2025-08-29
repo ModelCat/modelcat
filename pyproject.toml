@@ -142,9 +142,9 @@ test = ["coverage"]
 # The following would provide a command line executable called `sample`
 # which executes the function `main` from this package when invoked.
 [project.scripts]  # Optional
-modelcat_validate  = "modelcat.modelcatconnector.validate:validate_cli"
-modelcat_upload    = "modelcat.modelcatconnector.upload:upload_cli"
-modelcat_setup     = "modelcat.modelcatconnector.setup:setup_cli"
+modelcat_validate  = "modelcat.connector.validate:validate_cli"
+modelcat_upload    = "modelcat.connector.upload:upload_cli"
+modelcat_setup     = "modelcat.connector.setup:setup_cli"
 
 # This is configuration specific to the `setuptools` build backend.
 # If you are using a different build backend, you will need to change this.

@@ -3,8 +3,8 @@
 # setup.py that excludes installing the "tests" package
 import shutil
 import unittest
-import modelcat.modelcatconnector as modelcatconnector
-from modelcat.modelcatconnector.validate import DatasetValidator
+import modelcat.connector as connector
+from modelcat.connector.validate import DatasetValidator
 import os.path as osp
 import tempfile
 import logging as log
@@ -17,7 +17,7 @@ def _get_dataset_path() -> str:
 
     # first try where package is installed
     # this will work for local call of unittests
-    ds_path = osp.abspath(osp.join(osp.dirname(modelcatconnector.__file__), "..", "..", "..", datasets_folder))
+    ds_path = osp.abspath(osp.join(osp.dirname(connector.__file__), "..", "..", "..", datasets_folder))
     if osp.exists(ds_path):
         print(ds_path)
         return ds_path

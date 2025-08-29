@@ -1,12 +1,12 @@
 import unittest
-import modelcat.modelcatconnector as modelcatconnector
+import modelcat.connector as connector
 import logging as log
 
 
 class TestPkg(unittest.TestCase):
     def test_version_attr(self):
-        self.assertTrue(hasattr(modelcatconnector, "__version__"))
-        self.assertIsInstance(modelcatconnector.__version__, str)
+        self.assertTrue(hasattr(connector, "__version__"))
+        self.assertIsInstance(connector.__version__, str)
 
 
 if __name__ == '__main__':
