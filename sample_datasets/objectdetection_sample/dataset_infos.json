@@ -1,7 +1,7 @@
 {
     "objectdetection_sample": {
         "description": "A person detection dataset: a subset of COCO 2017 train/val dataset. Each image contains a set of objects of one class i.e. person. Each object has a corresponding bounding box in format [x_min, y_min, width, height]\n",
-        "citation": "@misc{lin2015microsoft, title={Microsoft COCO: Common Objects in Context}, author={Tsung-Yi Lin and Michael Maire and Serge Belongie and Lubomir Bourdev and Ross Girshick and James Hays and Pietro Perona and Deva Ramanan and C. Lawrence Zitnick and Piotr Dollár}, year={2015}, eprint={1405.0312}, archivePrefix={arXiv}, primaryClass={cs.CV}}",
+        "citation": "@misc{lin2015microsoft, title={Microsoft COCO: Common Objects in Context}, author={Tsung-Yi Lin and Michael Maire and Serge Belongie and Lubomir Bourdev and Ross Girshick and James Hays and Pietro Perona and Deva Ramanan and C. Lawrence Zitnick and Piotr Doll\u00e1r}, year={2015}, eprint={1405.0312}, archivePrefix={arXiv}, primaryClass={cs.CV}}",
         "homepage": "https://cocodataset.org/",
         "license": "Creative Commons Attribution 4.0 License.",
         "features": {
@@ -84,6 +84,6 @@
         "download_size": null,
         "post_processing_size": null,
         "dataset_size": 30,
-        "size_in_bytes": 5175814
+        "size_in_bytes": 5046231
     }
 }

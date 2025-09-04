@@ -18,7 +18,7 @@ Together with this instruction you can find [dataset samples](../../../sample_da
 
 * `classification_sample` – for classification
 * `objectdetection_sample` – for object detection
-* `keypoints_upperbody_sample` – for keypoints (detection)
+* `keypoints_sample` – for keypoints (detection)
 
 ## Dataset files layout
 Below is an example directory tree for a dataset. Note that images can be placed in arbitrary locations, as long as they stay within the `images/` directory
@@ -59,7 +59,7 @@ Note: Don’t use any special characters in the dataset name except underscores 
 Example `dataset_infos.json` metafile for task classification for a cats and dogs dataset
 ```json
 {
-    "modelcat_classification_catsdogs_sample": { // the dataset name which will be visible on modelcat datasets page
+    "classification_sample": { // the dataset name which will be visible on modelcat datasets page
         "description": "Sample dogs-vs-cats dataset\n", // Your dataset description
         "citation": "",
         "homepage": "https://app.modelcat.ai/",
@@ -115,7 +115,7 @@ Example `dataset_infos.json` metafile for task classification for a cats and dog
 Example below shows `dataset_infos.json` definition for object detection task. 
 ```json
 {
-    "modelcat_objectdetection_sample": {
+    "objectdetection_sample": {
         "description": "Subset of COCO-dataset. Contains colored images, where each image contains a set of objects of one class i.e. person. Each object has a corresponding bounding box in format [x_min, y_min, width, height]\n",
         "citation": "",
         "homepage": "https://app.modelcat.ai/",
@@ -156,8 +156,8 @@ Example below shows `dataset_infos.json` definition for object detection task.
             "label_column": null,
             "labels": ["person"] // Your labels
         }],
-        "builder_name": "modelcat_objectdetection_sample",
-        "config_name": "modelcat_objectdetection_sample",
+        "builder_name": "objectdetection_sample",
+        "config_name": "objectdetection_sample",
         "version": {
             "version_str": "1.0.0",
             "description": null,
@@ -198,7 +198,7 @@ Example below shows `dataset_infos.json` definition for object detection task.
 Example below shows `dataset_infos.json` definition for keypoints detection task. 
 ```json
 {
-    "modelcat_keypoints_upperbody_sample": {
+    "keypoints_sample": {
         "description": "",
         "citation": "",
         "homepage": "https://app.modelcat.ai/",
@@ -258,8 +258,8 @@ Example below shows `dataset_infos.json` definition for keypoints detection task
                 "num_keypoints": 8 // Total number of keypoints for each object
             }
         ],
-        "builder_name": "modelcat_keypoints_upperbody_sample",
-        "config_name": "modelcat_keypoints_upperbody_sample",
+        "builder_name": "keypoints_sample",
+        "config_name": "keypoints_sample",
         "version": {
             "version_str": "1.0.1",
             "description": null,

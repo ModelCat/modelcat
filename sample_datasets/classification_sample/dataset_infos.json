@@ -1,5 +1,5 @@
 {
-    "modelcat_classification_sample": {
+    "classification_sample": {
         "description": "A subset of Kaggle Cats vs Dogs dataset",
         "citation": "@Inproceedings (Conference){asirra-a-captcha-that-exploits-interest-aligned-manual-image-categorization,\nauthor = {Elson, Jeremy and Douceur, John (JD) and Howell, Jon and Saul, Jared},\ntitle = {Asirra: A CAPTCHA that Exploits Interest-Aligned Manual Image Categorization},\nbooktitle = {Proceedings of 14th ACM Conference on Computer and Communications Security (CCS)},\nyear = {2007},\nmonth = {October},\npublisher = {Association for Computing Machinery, Inc.},\nurl = {https://www.microsoft.com/en-us/research/publication/asirra-a-captcha-that-exploits-interest-aligned-manual-image-categorization/},\nedition = {Proceedings of 14th ACM Conference on Computer and Communications Security (CCS)},\n}",
         "license": "Community Data License Agreement - Permissive - Version 2.0",
@@ -17,8 +17,8 @@
                 ]
             }
         ],
-        "builder_name": "modelcat_classification_sample",
-        "config_name": "modelcat_classification_sample",
+        "builder_name": "classification_sample",
+        "config_name": "classification_sample",
         "version": {
             "version_str": "1.0.0",
             "description": null,
@@ -55,6 +55,6 @@
         "download_size": null,
         "post_processing_size": null,
         "dataset_size": 30,
-        "size_in_bytes": 769947
+        "size_in_bytes": 740339
     }
 }
