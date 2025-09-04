@@ -16,9 +16,9 @@ Your dataset needs to be structured in a certain way to be properly recognized b
 
 Together with this instruction you can find [dataset samples](../../../sample_datasets/) which demonstrate a correct way to prepare your data:
 
-* `modelcat_classification_catsdogs_sample` – for classification
-* `modelcat_objectdetection_sample` – for object detection
-* `modelcat_keypoints_upperbody_sample` – for keypoints (detection)
+* `classification_sample` – for classification
+* `objectdetection_sample` – for object detection
+* `keypoints_upperbody_sample` – for keypoints (detection)
 
 ## Dataset files layout
 Below is an example directory tree for a dataset. Note that images can be placed in arbitrary locations, as long as they stay within the `images/` directory
