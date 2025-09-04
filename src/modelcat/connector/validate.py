@@ -10,7 +10,7 @@ from itertools import combinations
 from collections import Counter
 import shutil
 from .utils import hash_dataset
-import pkg_resources
+import importlib.metadata
 from pycocotools.coco import COCO
 
 
@@ -1014,7 +1014,7 @@ def validate_cli():
 
     args, _ = parser.parse_known_args()
 
-    modelcatconnector_version = pkg_resources.get_distribution("modelcat").version
+    modelcatconnector_version = importlib.metadata.version("modelcat")
     print(f'ModelCatConnector (v{modelcatconnector_version}) - dataset validation utility'.center(100))
 
     if args.verbose:

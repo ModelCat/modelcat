@@ -17,7 +17,7 @@ Currently the following functions are supported:
 
 ### Dataset Preparation
 
-In order to prepare your dataset, please follow our guide: [Dataset preparation guide](docs/dataset_preparation.md)
+In order to prepare your dataset, please follow our guide: [Dataset preparation guide](/docs/dataset_preparation.md)
 
 ### ModelCatConnector Setup
 

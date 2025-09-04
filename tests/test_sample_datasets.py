@@ -35,7 +35,7 @@ def _get_dataset_path() -> str:
 class TestSimple(unittest.TestCase):
     def test_classification(self):
         ds_path = osp.join(
-            _get_dataset_path(), "modelcat_classification_sample"
+            _get_dataset_path(), "classification_sample"
         )
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -52,7 +52,7 @@ class TestSimple(unittest.TestCase):
 
     def test_object_detection(self):
         ds_path = osp.join(
-            _get_dataset_path(), "modelcat_objectdetection_sample"
+            _get_dataset_path(), "objectdetection_sample"
         )
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -67,7 +67,7 @@ class TestSimple(unittest.TestCase):
 
     def test_keypoint_detection(self):
         ds_path = osp.join(
-            _get_dataset_path(), "modelcat_keypoints_sample"
+            _get_dataset_path(), "keypoints_sample"
         )
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -83,7 +83,7 @@ class TestSimple(unittest.TestCase):
     # testing copying dataset to another directory, changing dataset infos entry and checking the autofix
     def test_autofix_simple(self):
         ds_path = osp.join(
-            _get_dataset_path(), "modelcat_keypoints_sample"
+            _get_dataset_path(), "keypoints_sample"
         )
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -115,7 +115,7 @@ class TestSimple(unittest.TestCase):
 
     def test_autofix(self):
         ds_path = osp.join(
-            _get_dataset_path(), "modelcat_keypoints_sample"
+            _get_dataset_path(), "keypoints_sample"
         )
 
         with tempfile.TemporaryDirectory() as tmp:
