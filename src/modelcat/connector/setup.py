@@ -14,6 +14,8 @@ import os
 import json
 import re
 import uuid
+import argparse
+import logging
 from getpass_asterisk.getpass_asterisk import getpass_asterisk as getpass
 
 
@@ -126,6 +128,7 @@ def run_setup(verbose: int = 0):
     print("Verifying AWS access...")
     # some retries to let the AWS access key propagate
     from modelcat.connector.utils.aws import check_s3_access
+
     try:
         check_s3_access(group_id, verbose=verbose > 0)
     except Exception:
@@ -155,7 +158,19 @@ def run_setup(verbose: int = 0):
 
 
 def setup_cli():
-    run_setup(verbose=1)
+
+    parser = argparse.ArgumentParser(description="Run ModelCat setup wizard.")
+    parser.add_argument("--debug", default=False, action="store_true", help="Enable debug logging")
+    args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+        verbose = 1
+    else:
+        logging.basicConfig(level=logging.WARNING)
+        verbose = 0
+
+    run_setup(verbose=verbose)
 
 
 if __name__ == "__main__":

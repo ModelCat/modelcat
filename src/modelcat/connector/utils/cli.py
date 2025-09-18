@@ -18,7 +18,7 @@ def run_cli_command(
     line_parser: Callable = None,
 ):
     log.info("Running CLI command:" + " ".join(command))
-
+    log.debug(" ".join(command))
     process = subprocess.Popen(
         command,
         cwd=cwd,
