@@ -9,7 +9,7 @@ from typing import List, Optional
 from itertools import combinations
 from collections import Counter
 import shutil
-from .utils import hash_dataset
+from modelcat.connector.utils import hash_dataset
 import importlib.metadata
 from pycocotools.coco import COCO
 
@@ -95,7 +95,7 @@ class DatasetValidator:
                     "message": "^^^^^ Validation stopped due to a critical error",
                 }
             )
-            return self.messages
+            return self.messages, self.restart_analysis
 
         thumbnail_path = osp.join(self.root_dir, "thumbnail.jpg")
         if not osp.exists(thumbnail_path):
