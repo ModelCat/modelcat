@@ -13,6 +13,8 @@ from modelcat.connector.utils import hash_dataset
 import importlib.metadata
 from pycocotools.coco import COCO
 
+from modelcat.connector.utils.consts import MAX_DATASET_SIZE, MAX_DATASET_SIZE_STR
+
 
 class DatasetValidator:
 
@@ -310,6 +312,17 @@ class DatasetValidator:
                 _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                 log.debug(f"Auto-fix: added dataset_size ({real_img_count} to dataset_infos.json.")
         real_size_in_bytes = _calculate_coco_dataset_size(self.image_dir, self.ann_dir, ann_file_names)
+
+        # currently supporting dataset sizes up to 100 GB
+        if real_size_in_bytes > MAX_DATASET_SIZE:
+            messages.append(
+                {
+                    'type': 'error',
+                    'message': f'The size of the dataset is {real_size_in_bytes / 100e9:.2f} GB, which is larger than '
+                               f'the maximum allowed size of {MAX_DATASET_SIZE_STR}. \nNotify customer support at '
+                               f'support@modelcat.ai for support of datasets larger than {MAX_DATASET_SIZE_STR}.'
+                }
+            )
         if "size_in_bytes" in dataset_info:
             if type(dataset_info["size_in_bytes"]) is int:
                 if not math.isclose(real_size_in_bytes, dataset_info["size_in_bytes"], rel_tol=0.001):
