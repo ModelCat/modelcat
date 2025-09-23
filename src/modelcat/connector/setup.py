@@ -5,6 +5,7 @@ from modelcat.connector.utils.consts import (
     DEFAULT_AWS_REGION,
     DEFAULT_AWS_PROFILE,
     PACKAGE_NAME,
+    OAUTH_TOKEN_RE,
 )
 from modelcat.connector.utils.api import ProductAPIClient, APIConfig, APIError
 from modelcat.connector.utils.aws import check_awscli, check_aws_configuration
@@ -15,6 +16,24 @@ import json
 import re
 import uuid
 from getpass_asterisk.getpass_asterisk import getpass_asterisk as getpass
+import time
+
+
+def mask_modelcat_token(token: str, show_prefix: int = 3, show_suffix: int = 3, mask_len: int = 12) -> str:
+    """
+    Validate and mask a token of the form: <int>_<40 hex chars>.
+    Example output: 1_123********678
+    """
+    token_re = re.compile(OAUTH_TOKEN_RE)
+    m = token_re.match(token or "")
+    if not m:
+        # Don’t leak invalid input; show a generic masked example length
+        return "?:***" + "*" * mask_len + "***"
+
+    group_id, hexpart = m.groups()             # e.g. "1", "123456...40hex..."
+    head = hexpart[:show_prefix]
+    tail = hexpart[-show_suffix:] if show_suffix else ""
+    return f"{group_id}_{head}{'*' * mask_len}{tail}"
 
 
 def run_setup(verbose: int = 0):
@@ -32,8 +51,32 @@ def run_setup(verbose: int = 0):
         print("AWS CLI installation verified.")
         print("-" * 50)
 
+    # setting up the modelcat paths
+    modelcat_path = osp.join(Path.home(), f".{PRODUCT_NAME.lower()}")
+    os.makedirs(modelcat_path, exist_ok=True)
+    modelcat_config_path = osp.join(modelcat_path, "config.json")
+
+    # loading previous cached values
+    if osp.exists(modelcat_config_path):
+        try:
+            with open(modelcat_config_path) as fp:
+                product_config_old = json.load(fp)
+                assert "group_id" in product_config_old
+                assert "oauth_token" in product_config_old
+                group_id_old = product_config_old["group_id"]
+                oauth_token_old = product_config_old["oauth_token"]
+        except Exception:
+            group_id_old = None
+            oauth_token_old = None
+    else:
+        group_id_old = None
+        oauth_token_old = None
+
     while 1:
-        group_id = input(f"{PRODUCT_NAME} Group ID: ")
+        previous_group_clause = f" [{group_id_old}]" if group_id_old is not None else ""
+        group_id = input(f"{PRODUCT_NAME} Group ID{previous_group_clause}: ")
+        if group_id == "" and group_id_old is not None:
+            group_id = group_id_old
         try:
             uuid.UUID(str(group_id))
             break
@@ -43,26 +86,50 @@ def run_setup(verbose: int = 0):
             )
 
     while 1:
-        oauth_token = getpass(f"{PRODUCT_NAME} OAuth Token: ")
-        if re.match(r"^\d+_[a-f0-9]{40}$", oauth_token):
+        previous_token_clause = f" [{mask_modelcat_token(oauth_token_old)}]" if oauth_token_old is not None else ""
+
+        try:
+            oauth_token = getpass(f"{PRODUCT_NAME} OAuth Token{previous_token_clause}: ")
+        except EOFError:
+            # if user enters an empty string, use the old value
+            oauth_token = ""
+
+        if oauth_token == "" and oauth_token_old is not None:
+            oauth_token = oauth_token_old
+        if re.match(OAUTH_TOKEN_RE, oauth_token):
             break
         print(
-            f"Oops... This does not look right. `{PRODUCT_NAME} OAuth Token` should be an integer followed by an underscore, followed by a 40 character string e.g.: 1_1234567890abcdef1234567890abcdef12345678"
+            f"Oops... This does not look right. "
+            f"`{PRODUCT_NAME} OAuth Token` should be an integer followed by an underscore, "
+            f"followed by a 40 character string e.g.: 1_1234567890abcdef1234567890abcdef12345678"
         )
+
+    api_config = APIConfig(
+        base_url=PRODUCT_URL,
+        oauth_token=oauth_token,
+    )
+    api_client = ProductAPIClient(api_config)
+
+    # validate the user via OAuth token
+    try:
+        creds = api_client.get_me()
+        print(f"Successfully authenticated as {creds['full_name']}")
+    except APIError:
+        print(
+            f"Failed to validate the user via OAuth token. "
+            f"Please obtain a valid token at {PRODUCT_URL}/datasets#upload."
+        )
+        exit(1)
 
     # get the AWS access key credentials
     try:
-        api_config = APIConfig(
-            base_url=PRODUCT_URL,
-            oauth_token=oauth_token,
-        )
-        api_client = ProductAPIClient(api_config)
         creds = api_client.get_aws_access(group_id)
 
         aws_access_key = creds["access_key_id"]
         aws_secret_access_key = creds["secret_access_key"]
     except APIError as ae:
-        print(f"{PRODUCT_NAME} API error: {ae}")
+        print(f"Failed to obtain AWS access key credentials: {ae}. "
+              f"Please try again or obtain another token at {PRODUCT_URL}/datasets#upload.")
         exit(1)
 
     # configure AWS CLI
@@ -121,12 +188,14 @@ def run_setup(verbose: int = 0):
     if not check_aws_configuration(verbose):
         print("Configuration failed.")
 
+    print("Successfully obtained AWS access key credentials.")
     print("-" * 50)
     # checking access to S3
     print("Verifying AWS access...")
     # some retries to let the AWS access key propagate
     from modelcat.connector.utils.aws import check_s3_access
     try:
+        time.sleep(5)
         check_s3_access(group_id, verbose=verbose > 0)
     except Exception:
         print("Verification failed... Please check your credentials or contact customer support.")
@@ -139,9 +208,7 @@ def run_setup(verbose: int = 0):
         "oauth_token": oauth_token,
     }
 
-    modelcat_path = osp.join(Path.home(), f".{PRODUCT_NAME.lower()}")
-    os.makedirs(modelcat_path, exist_ok=True)
-    with open(osp.join(modelcat_path, "config.json"), "w") as fp:
+    with open(modelcat_config_path, "w") as fp:
         json.dump(product_config, fp, indent=4)
 
     print("-" * 50)

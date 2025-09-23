@@ -41,7 +41,7 @@ def check_aws_configuration(verbose: int = 0) -> bool:
     return True
 
 
-@retry(exceptions=Exception, delay=20, tries=6, backoff=1)  # trying for 6 * 20 = 120 seconds
+@retry(exceptions=Exception, delay=20, tries=6, backoff=1, logger=None)  # trying for 6 * 20 = 120 seconds
 def check_s3_access(group_id: str, verbose: bool = False) -> None:
 
     cmd = [
@@ -61,5 +61,4 @@ def check_s3_access(group_id: str, verbose: bool = False) -> None:
         )
         print("S3 access verified")
     except CLICommandError as e:
-        print(f"Cannot obtain AWS access: {e}")
         raise

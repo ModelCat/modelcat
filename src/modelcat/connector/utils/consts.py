@@ -6,3 +6,5 @@ DEFAULT_AWS_PROFILE = "modelcat_user"
 
 MAX_DATASET_SIZE = 100e9
 MAX_DATASET_SIZE_STR = "100 GB"
+
+OAUTH_TOKEN_RE = r"^(\d+)_([0-9a-fA-F]{40})$"

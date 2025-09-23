@@ -139,6 +139,40 @@ class BaseAPIClient:
 class ProductAPIClient(BaseAPIClient):
     """Client for storage token related API endpoints"""
 
+    def get_me(self):
+        """
+        Get information about the current user for API validation
+
+        Returns:
+            Dict containing user information:
+                - user_id
+                - full_name
+                - email
+                - creation_date
+                - modification_date
+                - last_seen_date
+                - origin
+                - groups
+        """
+        result = self._make_request(
+            method="GET",
+            endpoint="/api/users/me",
+        )
+        if not result:
+            raise APIError("No data returned from API")
+
+        required_fields = {
+            "user_id",
+            "full_name",
+            "email",
+            "origin",
+            "groups",
+        }
+        if not all(field in result for field in required_fields):
+            raise APIError("Missing required fields in API response")
+
+        return result
+
     def get_aws_access(self, group_id: str) -> Dict:
         """
         Get storage token for a specific group
@@ -159,7 +193,7 @@ class ProductAPIClient(BaseAPIClient):
             data={'groupId': group_id}
         )
 
-        if not result.get('data'):
+        if not result or not result.get('data'):
             raise APIError("No data returned from API")
 
         required_fields = {'group_id', 'access_key_id', 'secret_access_key', 'expiration_date'}
