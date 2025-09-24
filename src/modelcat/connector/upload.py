@@ -104,7 +104,7 @@ class DatasetUploader:
 
         return True
 
-    def upload_s3(self):
+    def upload_s3(self, on_existing_dataset_name: str = None):
         api_config = APIConfig(
             base_url=PRODUCT_URL,
             oauth_token=self.oauth_token,
@@ -119,24 +119,39 @@ class DatasetUploader:
         len_same_name = len(datasets_same_name)
         old_ds_uuid = None
         if len_same_name > 0:
-            print(f"We found {len_same_name} dataset(s) with the same name:")
-            for i, ds in enumerate(datasets_same_name):
-                creation_datetime = datetime.fromisoformat(ds["creation_date"].replace("Z", "+00:00"))
-                creation_datetime_nice = format_local_datetime(creation_datetime)
-                print(f"[{i + 1}]  - {ds['name']} ({ds['uuid']}) created on {creation_datetime_nice} with URI {ds['path']}")
-            print(
-                f"To proceed, enter one of the following options: "
-                f"\n  - 'n' to cancel the upload. You can change the dataset name in dataset_infos.json and try again."
-                f"\n  - 'y' to proceed with the upload. You will be able to view and use all datasets with the same name."
-                f"\n  - '{1}' - '{len_same_name}' to overwrite an existing dataset with that index."
-            )
-            choice = input("> ")
+            print(f"We found {len_same_name} dataset(s) with the same name.")
+            if on_existing_dataset_name is None:
+                for i, ds in enumerate(datasets_same_name):
+                    creation_datetime = datetime.fromisoformat(
+                        ds["creation_date"].replace("Z", "+00:00")
+                    )
+                    creation_datetime_nice = format_local_datetime(creation_datetime)
+                    print(
+                        f"[{i + 1}]  - {ds['name']} ({ds['uuid']}) created on {creation_datetime_nice} with URI {ds['path']}"
+                    )
+                print(
+                    f"To proceed, enter one of the following options: "
+                    f"\n  - 'n' to cancel the upload. You can change the dataset name in dataset_infos.json and try again."
+                    f"\n  - 'y' to proceed with the upload. You will be able to view and use all datasets with the same name."
+                    f"\n  - '{1}' - '{len_same_name}' to overwrite an existing dataset with that index."
+                )
+                choice = input("> ")
+            else:
+                choice = on_existing_dataset_name
             if choice == "n":
                 print("Upload cancelled.")
                 exit(1)
             elif choice == "y":
                 print("Proceeding with the upload...")
-            elif choice.isdigit():
+            elif choice.isdigit() or choice == "o":
+                # if the user wants to overwrite automatically but there are multiple datasets with the same name,
+                # we can't select a random dataset.
+                if choice == "o" and len_same_name == 1:
+                    choice = "0"
+                else:
+                    print(f"Multiple datasets with the same name found. Aborting upload. "
+                          f"Try rerunning in interactive mode to select which dataset to overwrite.")
+                    exit(1)
                 choice_idx = int(choice) - 1
                 if choice_idx < 0 or choice_idx >= len_same_name:
                     print("Invalid choice.")
@@ -276,6 +291,18 @@ def upload_cli():
         required=True,
     )
     parser.add_argument(
+        "--on_existing_dataset_name",
+        choices=["n", "y", "o"],
+        default=None,
+        help=(
+            "Behavior when uploading a dataset with the same name. If omitted, user will be prompted.\n"
+            "  n : Abort upload\n"
+            "  y : Continue uploading with the same name\n"
+            "  o : Overwrite existing dataset with the name "
+            "(fails if multiple datasets have the same name)"
+        ),
+    )
+    parser.add_argument(
         "--verbose", "-v", action="count", default=0, help="Verbosity level: -v, -vv"
     )
 
@@ -311,7 +338,7 @@ def upload_cli():
         verbose=args.verbose,
     )
 
-    dsu.upload_s3()
+    dsu.upload_s3(on_existing_dataset_name=args.on_existing_dataset_name)
 
 
 if __name__ == "__main__":
