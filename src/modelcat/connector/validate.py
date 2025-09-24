@@ -23,7 +23,7 @@ class DatasetValidator:
             dataset_root_dir: str,
             working_dir: str = None,
             auto_fix: bool = False,
-            auto_fix_prompt: bool = True
+            auto_fix_2: str = "n"
     ):
 
         if not osp.exists(dataset_root_dir):
@@ -36,7 +36,7 @@ class DatasetValidator:
         self.working_dir = working_dir
         self.auto_fix = auto_fix
         self.log_filename = "dataset_validator_log.txt"
-        self.auto_fix_prompt = auto_fix_prompt
+        self.auto_fix_2 = auto_fix_2
         self.restart_analysis = False
 
         self.messages = None
@@ -60,6 +60,7 @@ class DatasetValidator:
         errors_count = len([m for m in self.messages if m.get("type") == "error"])
         if errors_count:
             print(f"Dataset not validated, {errors_count} error(s) found.")
+            print(f"For more details, check the log file: {self.log_filepath}")
         else:
             print("No critical errors found")
             print("Creating dataset signature ...")
@@ -485,7 +486,7 @@ class DatasetValidator:
                         )
 
             if len(imgs_without_anns) > 0:
-                if self.auto_fix and self.handle_permission(
+                if self.handle_permission(
                         f'Auto-fix: remove all images without annotations from the "{coco_file_name}" annotation '
                         f'file? (y/n):'
                 ):
@@ -606,7 +607,7 @@ class DatasetValidator:
                         hashes[file_hash] = []
                     hashes[file_hash].append(img["id"])
         if duplicate_count > 0:
-            if self.auto_fix and self.handle_permission('Auto-fix: Do you want to delete duplicate images from your '
+            if self.handle_permission('Auto-fix: Do you want to delete duplicate images from your '
                                                         'dataset? (y/n): '):
                 for hash_images in hashes.values():
                     if len(hash_images) > 1:
@@ -708,7 +709,7 @@ class DatasetValidator:
                 (item, count) for item, count in Counter(images).items() if count > 1
             ]
             if len(duplicates) > 0:
-                if self.auto_fix and self.handle_permission(
+                if self.handle_permission(
                         f'Auto-fix: Do you want to delete duplicate images in split "{coco_file_name}"? (y/n): '):
                     for img, count in duplicates:
                         if count > 1:
@@ -917,10 +918,12 @@ class DatasetValidator:
         return []
 
     def handle_permission(self, message):
-        if self.auto_fix_prompt:
+        if self.auto_fix_2 == "p":
             return input(message) == 'y'
-        else:
+        elif self.auto_fix_2 == "y":
             return True
+        else:
+            return False
 
 
 def _count_imgs_in_dir(directory: str) -> int:
@@ -1017,11 +1020,25 @@ def validate_cli():
         type=str,
         required=True,
     )
-    parser.add_argument('--auto-fix', '-af', action='store_true', default=False,
-                        help='Auto-fix smaller issues about your dataset. Resolves most warnings.')
-    parser.add_argument('--yes', '-y', action='store_true', default=False,
-                        help='Automatically agree to all prompts from the auto-fix tool. NOTE: choosing this option'
-                             ' can modify your dataset images and annotation files.')
+    parser.add_argument(
+        '--auto-fix',
+        '-af',
+        action='store_true',
+        default=False,
+        help='Auto-fix smaller issues about your dataset (in dataset_infos.json, not touching images or annotations). Resolves most warnings.',
+    )
+    parser.add_argument(
+        "--auto-fix-2",
+        "-af2",
+        choices=["n", "y", "p"],
+        default="n",
+        help=(
+            "Apply level-2 auto-fix. NOTE: this can modify your images and annotation files automatically.\n"
+            "  n : don't apply level-2 auto-fix (default)\n"
+            "  y : apply level-2 auto-fix automatically\n"
+            "  p : prompt each time"
+        ),
+    )
     parser.add_argument('--verbose', '-v', action='count', required=False, default=0,
                         help="Verbosity level: -v, -vv")
 
@@ -1035,13 +1052,13 @@ def validate_cli():
 
     dataset_path = args.dataset_path
     auto_fix = args.auto_fix
-    auto_fix_prompt = not args.yes
+    auto_fix_2 = args.auto_fix_2
 
     dataset_validator = DatasetValidator(
         dataset_root_dir=dataset_path,
         working_dir=dataset_path,
         auto_fix=auto_fix,
-        auto_fix_prompt=auto_fix_prompt
+        auto_fix_2=auto_fix_2
     )
     while True:
         messages, restart = dataset_validator.validate_dataset()

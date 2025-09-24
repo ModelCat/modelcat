@@ -121,7 +121,7 @@ class TestSimple(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             shutil.copytree(ds_path, tmp, dirs_exist_ok=True)
             dsv_no_autofix = DatasetValidator(tmp, tmp, auto_fix=False)
-            dsv_autofix = DatasetValidator(tmp, tmp, auto_fix=True, auto_fix_prompt=False)
+            dsv_autofix = DatasetValidator(tmp, tmp, auto_fix=True, auto_fix_2="n")
             while True:
                 msgs, restart = dsv_no_autofix.validate_dataset()
                 if not restart:
