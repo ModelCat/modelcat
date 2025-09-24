@@ -72,6 +72,9 @@ def run_setup(verbose: int = 0):
         group_id_old = None
         oauth_token_old = None
 
+    print(
+        f"Please enter your {PRODUCT_NAME} credentials (Group ID and OAuth Token)."
+        f"\nYou can obtain them at {PRODUCT_URL}/datasets#upload.\n")
     while 1:
         previous_group_clause = f" [{group_id_old}]" if group_id_old is not None else ""
         group_id = input(f"{PRODUCT_NAME} Group ID{previous_group_clause}: ")

@@ -9,9 +9,11 @@ import uuid
 from tqdm import tqdm
 import argparse
 from pathlib import Path
+from datetime import datetime
 
 from modelcat.consts import PRODUCT_NAME, PRODUCT_S3_BUCKET, PRODUCT_URL
 from modelcat.connector.utils.api import APIConfig, ProductAPIClient, APIError
+from modelcat.connector.utils.common import format_local_datetime
 from modelcat.connector.utils.consts import PACKAGE_NAME, DEFAULT_AWS_PROFILE
 
 from modelcat.connector.utils.aws import check_aws_configuration, check_s3_access
@@ -54,7 +56,7 @@ class DatasetUploader:
         with open(osp.join(self.dataset_root, "dataset_infos.json")) as fp:
             self.dataset_infos = json.load(fp)
         self.dataset_name = self.normalize_ds_name(list(self.dataset_infos.keys())[0])
-        self.s3_uri = f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/{self.dataset_name}/"
+        self.s3_uri = f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/{str(uuid.uuid4())}/"
 
         try:
             check_s3_access(self.group_id, verbose=self.verbose > 0)
@@ -103,6 +105,48 @@ class DatasetUploader:
         return True
 
     def upload_s3(self):
+        api_config = APIConfig(
+            base_url=PRODUCT_URL,
+            oauth_token=self.oauth_token,
+        )
+        api_client = ProductAPIClient(api_config)
+
+        print("Checking for an existing dataset with the same name...")
+
+        datasets = api_client.list_datasets()
+
+        datasets_same_name = [ds for ds in datasets if ds.get("name") == self.dataset_name]
+        len_same_name = len(datasets_same_name)
+        old_ds_uuid = None
+        if len_same_name > 0:
+            print(f"We found {len_same_name} dataset(s) with the same name:")
+            for i, ds in enumerate(datasets_same_name):
+                creation_datetime = datetime.fromisoformat(ds["creation_date"].replace("Z", "+00:00"))
+                creation_datetime_nice = format_local_datetime(creation_datetime)
+                print(f"[{i + 1}]  - {ds['name']} ({ds['uuid']}) created on {creation_datetime_nice} with URI {ds['path']}")
+            print(
+                f"To proceed, enter one of the following options: "
+                f"\n  - 'n' to cancel the upload. You can change the dataset name in dataset_infos.json and try again."
+                f"\n  - 'y' to proceed with the upload. You will be able to view and use all datasets with the same name."
+                f"\n  - '{1}' - '{len_same_name}' to overwrite an existing dataset with that index."
+            )
+            choice = input("> ")
+            if choice == "n":
+                print("Upload cancelled.")
+                exit(1)
+            elif choice == "y":
+                print("Proceeding with the upload...")
+            elif choice.isdigit():
+                choice_idx = int(choice) - 1
+                if choice_idx < 0 or choice_idx >= len_same_name:
+                    print("Invalid choice.")
+                    exit(1)
+                self.s3_uri = datasets_same_name[choice_idx]["path"]
+                print(f"Overwriting existing dataset with URI: {self.s3_uri}")
+                old_ds_uuid = datasets_same_name[choice_idx]["uuid"]
+        else:
+            print("No datasets found with the same name. Uploading a new dataset...")
+
         log.info(f"Uploading to: {self.s3_uri}")
 
         num_files, size = self._count_files(
@@ -144,17 +188,24 @@ class DatasetUploader:
             )
 
         try:
-            print(f"Registering dataset in {PRODUCT_NAME} platform...")
-            api_config = APIConfig(
-                base_url=PRODUCT_URL,
-                oauth_token=self.oauth_token,
-            )
-            api_client = ProductAPIClient(api_config)
-            register_data = api_client.register_dataset(
-                name=self.dataset_name,
-                s3_uri=self.s3_uri,
-                dataset_infos=self.dataset_infos,
-            )
+            if not old_ds_uuid:
+                # we register new datasets
+                print(f"Registering dataset in {PRODUCT_NAME} platform...")
+
+                register_data = api_client.register_dataset(
+                    name=self.dataset_name,
+                    s3_uri=self.s3_uri,
+                    dataset_infos=self.dataset_infos,
+                )
+                ds_uuid = register_data["uuid"]
+            else:
+                # we update old datasets
+                print(f"Updating dataset in {PRODUCT_NAME} platform...")
+                api_client.update_dataset(
+                    dataset_uuid=old_ds_uuid,
+                    dataset_infos=self.dataset_infos,
+                )
+                ds_uuid = old_ds_uuid
 
             print("Running Dataset Analysis immediately after registration...")
             api_client.submit_dataset_analysis(
@@ -164,11 +215,11 @@ class DatasetUploader:
             )
             print("-" * 100)
             print(
-                f"Dataset uploaded with uuid '{register_data['uuid']}'. You can view your dataset at: "
-                f"{PRODUCT_URL}/datasets/{self.group_id}/{self.dataset_name}"
+                f"Dataset uploaded with uuid '{ds_uuid}'. You can view your dataset at: "
+                f"{PRODUCT_URL}/datasets/{ds_uuid}"
             )
         except APIError as ae:
-            print(f"{PRODUCT_NAME} API error: {ae}")
+            print(f"Dataset registration/upload failed. {PRODUCT_NAME} API error: {ae}")
             exit(1)
 
     @staticmethod

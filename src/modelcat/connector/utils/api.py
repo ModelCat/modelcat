@@ -233,6 +233,63 @@ class ProductAPIClient(BaseAPIClient):
 
         return result
 
+    def update_dataset(
+            self,
+            dataset_uuid: str,
+            dataset_infos: dict,
+            hidden: bool = False,
+            task_types: list[str] | None = None,
+            access: dict | None = None,
+    ):
+        body = {"datasetInfos": dataset_infos}
+        if hidden is not None:
+            body["hidden"] = hidden
+        if task_types is not None:
+            body["taskTypes"] = task_types
+        if access is not None:
+            body["access"] = access
+
+        result = self._make_request(
+            method="PUT",
+            endpoint=f"/api/datasets/{dataset_uuid}",
+            data=body,
+        )
+
+        if not result.get("success", True):
+            error_msg = "; ".join(result.get("errors", ["Dataset update failed."]))
+            raise APIError(f"Dataset update error: {error_msg}")
+
+        return result
+
+    def list_datasets(
+        self,
+        fields: list[str] | None = None,
+        include_dataset_infos: bool = False
+    ):
+        """
+        List all user-visible datasets using the /api/datasets/list endpoint.
+
+        Args:
+            fields: List of metadata fields to include in the response (e.g. ["description", "splits"]).
+            include_dataset_infos: Whether to include dataset metadata/info in the response.
+
+        Returns:
+            List of datasets visible to the current user.
+        """
+        params = {}
+        if fields:
+            params["fields"] = ",".join(fields)
+        if include_dataset_infos:
+            params["includeDatasetInfos"] = "true"
+
+        result = self._make_request(
+            method="GET",
+            endpoint="/api/datasets/list",
+            params=params
+        )
+
+        return result
+
     def submit_dataset_analysis(
             self,
             dataset_uri: str,

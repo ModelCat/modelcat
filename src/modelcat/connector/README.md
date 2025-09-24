@@ -21,7 +21,7 @@ In order to prepare your dataset, please follow our guide: [Dataset preparation 
 
 ### ModelCatConnector Setup
 
-This one-time procedure will configure ModelCatConnector's access to the ModelCat platform. You will need to provide your `ModelCat Group ID` and `ModelCat OAuth Token`.
+This one-time procedure will configure ModelCatConnector's access to the ModelCat platform. You will need to provide your `ModelCat Group ID` and `ModelCat OAuth Token`. You can obtain this information on the [ModelCat Datasets Upload](https://app.modelcat.ai/datasets#upload) page.
 
 > **Note:** The OAuth token is used to authenticate with the ModelCat platform. You can obtain your OAuth token from the ModelCat platform. The token format should be an integer followed by an underscore, followed by a 40 character hexadecimal string (e.g., `1_1234567890abcdef1234567890abcdef12345678`).
 >
