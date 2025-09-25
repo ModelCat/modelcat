@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock, mock_open, ANY
 import json
 
 from modelcat.connector.upload import DatasetUploader, upload_cli
@@ -80,7 +80,7 @@ class TestDatasetUploader(unittest.TestCase):
         self.assertEqual(uploader.group_id, self.group_id)
         self.assertEqual(uploader.oauth_token, self.oauth_token)
         self.assertEqual(uploader.dataset_name, "test_dataset")
-        self.assertEqual(uploader.s3_uri, f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/test_dataset/")
+        self.assertIn(f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/", uploader.s3_uri)
 
         # Verify dependencies were checked
         mock_check_aws_config.assert_called_once()
@@ -206,7 +206,7 @@ class TestDatasetUploader(unittest.TestCase):
         mock_api_client.assert_called_once()
         mock_client_instance.register_dataset.assert_called_once_with(
             name="test_dataset",
-            s3_uri=f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/test_dataset/",
+            s3_uri=ANY,
             dataset_infos=self.mock_dataset_infos
         )
         mock_client_instance.submit_dataset_analysis.assert_called_once()

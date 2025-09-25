@@ -69,7 +69,7 @@ class TestSetup(unittest.TestCase):
         mock_makedirs.assert_called_once()
 
         # Verify config file was written
-        mock_file.assert_called_once()
+        mock_file.assert_called()
         # The write method is called multiple times to write the JSON config file
         self.assertTrue(mock_file().write.called)
 

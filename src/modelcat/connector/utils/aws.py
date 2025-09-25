@@ -60,5 +60,5 @@ def check_s3_access(group_id: str, verbose: bool = False) -> None:
             line_parser=lambda line: outputs.append(line.strip()),
         )
         print("S3 access verified")
-    except CLICommandError as e:
+    except CLICommandError:
         raise

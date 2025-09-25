@@ -149,8 +149,8 @@ class DatasetUploader:
                 if choice == "o" and len_same_name == 1:
                     choice = "0"
                 else:
-                    print(f"Multiple datasets with the same name found. Aborting upload. "
-                          f"Try rerunning in interactive mode to select which dataset to overwrite.")
+                    print("Multiple datasets with the same name found. Aborting upload. "
+                          "Try rerunning in interactive mode to select which dataset to overwrite.")
                     exit(1)
                 choice_idx = int(choice) - 1
                 if choice_idx < 0 or choice_idx >= len_same_name:

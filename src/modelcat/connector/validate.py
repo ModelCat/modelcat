@@ -607,8 +607,7 @@ class DatasetValidator:
                         hashes[file_hash] = []
                     hashes[file_hash].append(img["id"])
         if duplicate_count > 0:
-            if self.handle_permission('Auto-fix: Do you want to delete duplicate images from your '
-                                                        'dataset? (y/n): '):
+            if self.handle_permission('Auto-fix: Do you want to delete duplicate images from your dataset? (y/n): '):
                 for hash_images in hashes.values():
                     if len(hash_images) > 1:
                         img_to_keep = [img for img in coco["images"] if img["id"] == hash_images[0]][0]

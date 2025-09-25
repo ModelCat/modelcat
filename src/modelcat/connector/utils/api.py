@@ -2,10 +2,9 @@ import requests
 import json
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from typing import Dict, Optional
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Union
+from typing import Union, Optional, Dict
 
 from modelcat.connector.utils.consts import PACKAGE_NAME
 
@@ -238,8 +237,8 @@ class ProductAPIClient(BaseAPIClient):
             dataset_uuid: str,
             dataset_infos: dict,
             hidden: bool = False,
-            task_types: list[str] | None = None,
-            access: dict | None = None,
+            task_types: Optional[list[str]] = None,
+            access: Optional[dict] = None,
     ):
         body = {"datasetInfos": dataset_infos}
         if hidden is not None:
@@ -263,7 +262,7 @@ class ProductAPIClient(BaseAPIClient):
 
     def list_datasets(
         self,
-        fields: list[str] | None = None,
+        fields: Optional[list[str]] = None,
         include_dataset_infos: bool = False
     ):
         """
@@ -294,9 +293,9 @@ class ProductAPIClient(BaseAPIClient):
             self,
             dataset_uri: str,
             group_id: str,
-            dataset_name: str = None,
-            job_name: str = None,
-            env: str = None,
+            dataset_name: Optional[str] = None,
+            job_name: Optional[str] = None,
+            env: Optional[str] = None,
     ):
         now_utc = datetime.now(timezone.utc)
         now_utc_str = now_utc.strftime('%b %d, %Y %H:%M UTC')
