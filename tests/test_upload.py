@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock, mock_open, ANY
 import json
 
 from modelcat.connector.upload import DatasetUploader, upload_cli
+from modelcat.connector.utils.common import UserChoice
 from modelcat.consts import PRODUCT_S3_BUCKET
 
 
@@ -71,6 +72,7 @@ class TestDatasetUploader(unittest.TestCase):
         # Create uploader instance
         uploader = DatasetUploader(
             dataset_root_dir=self.dataset_root,
+            working_dir=self.dataset_root,
             group_id=self.group_id,
             oauth_token=self.oauth_token
         )
@@ -86,7 +88,6 @@ class TestDatasetUploader(unittest.TestCase):
         mock_check_aws_config.assert_called_once()
         mock_exists.assert_called_once_with(self.dataset_root)
         mock_dataset_check.assert_called_once()
-        mock_check_s3_access.assert_called_once()
 
     @patch('modelcat.connector.upload.check_aws_configuration')
     @patch('modelcat.connector.upload.osp.exists')
@@ -100,6 +101,7 @@ class TestDatasetUploader(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             DatasetUploader(
                 dataset_root_dir=self.dataset_root,
+                working_dir=self.dataset_root,
                 group_id="invalid-uuid",
                 oauth_token=self.oauth_token
             )
@@ -119,6 +121,7 @@ class TestDatasetUploader(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             DatasetUploader(
                 dataset_root_dir=self.dataset_root,
+                working_dir=self.dataset_root,
                 group_id=self.group_id,
                 oauth_token=self.oauth_token
             )
@@ -151,6 +154,7 @@ class TestDatasetUploader(unittest.TestCase):
                 # Create the uploader instance
                 uploader = DatasetUploader(
                     dataset_root_dir=self.dataset_root,
+                    working_dir=self.dataset_root,
                     group_id=self.group_id,
                     oauth_token=self.oauth_token
                 )
@@ -170,18 +174,23 @@ class TestDatasetUploader(unittest.TestCase):
     @patch('modelcat.connector.upload.run_cli_command')
     @patch('modelcat.connector.upload.ProductAPIClient')
     @patch('modelcat.connector.upload.DatasetUploader.dataset_check', return_value=True)
+    @patch('modelcat.connector.upload.DatasetUploader.obtain_s3_access', return_value=None)
     @patch('modelcat.connector.upload.check_aws_configuration', return_value=True)
     @patch('modelcat.connector.upload.osp.exists', return_value=True)
     @patch('modelcat.connector.upload.check_s3_access')
     @patch('modelcat.connector.upload.DatasetUploader._count_files', return_value=(10, 1000))
     def test_upload_s3_success(
             self, mock_count_files, mock_check_s3_access, mock_exists,
-            mock_check_aws_config, mock_dataset_check, mock_api_client, mock_run_cli
+            mock_check_aws_config, mock_obtain_s3_access, mock_dataset_check, mock_api_client, mock_run_cli
     ):
         """Test successful S3 upload."""
         # Mock dependencies
         mock_client_instance = MagicMock()
         mock_client_instance.register_dataset.return_value = {"uuid": "test-uuid"}
+        mock_client_instance.submit_dataset_analysis.return_value = {
+            "uuid": "test-uuid",
+            "results_url": "/results?uuid=test-uuid"
+        }
         mock_api_client.return_value = mock_client_instance
 
         # Mock the file operations
@@ -192,6 +201,7 @@ class TestDatasetUploader(unittest.TestCase):
             # Create uploader instance
             uploader = DatasetUploader(
                 dataset_root_dir=self.dataset_root,
+                working_dir=self.dataset_root,
                 group_id=self.group_id,
                 oauth_token=self.oauth_token
             )
@@ -225,6 +235,7 @@ class TestDatasetUploader(unittest.TestCase):
         args = MagicMock()
         args.dataset_path = self.dataset_root
         args.verbose = 1
+        args.restore = "n"
         mock_parse_args.return_value = args
 
         # Mock package version
@@ -247,7 +258,9 @@ class TestDatasetUploader(unittest.TestCase):
             group_id=self.group_id,
             oauth_token=self.oauth_token,
             dataset_root_dir=self.dataset_root,
-            verbose=1
+            verbose=1,
+            working_dir=self.dataset_root,
+            restore=UserChoice.NO,
         )
         mock_uploader_instance.upload_s3.assert_called_once()
 

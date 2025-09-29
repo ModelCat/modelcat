@@ -1,9 +1,5 @@
 from modelcat.consts import PRODUCT_NAME, PRODUCT_URL
-from modelcat.connector.utils import run_cli_command
 from modelcat.connector.utils.consts import (
-    DEFAULT_AWS_FORMAT,
-    DEFAULT_AWS_REGION,
-    DEFAULT_AWS_PROFILE,
     PACKAGE_NAME,
     OAUTH_TOKEN_RE,
 )
@@ -16,7 +12,6 @@ import json
 import re
 import uuid
 from getpass_asterisk.getpass_asterisk import getpass_asterisk as getpass
-import time
 
 
 def mask_modelcat_token(token: str, show_prefix: int = 3, show_suffix: int = 3, mask_len: int = 12) -> str:
@@ -44,7 +39,7 @@ def run_setup(verbose: int = 0):
         print("Error: AWS CLI was not detected on your system.")
         print("Please install it and run the setup program again")
         print(
-            "For install instuctions go to: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+            "For install instructions go to: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
         )
         exit(1)
     else:
@@ -116,7 +111,7 @@ def run_setup(verbose: int = 0):
     # validate the user via OAuth token
     try:
         creds = api_client.get_me()
-        print(f"Successfully authenticated as {creds['full_name']}")
+        print(f"\nSuccessfully authenticated as {creds['full_name']}")
     except APIError:
         print(
             f"Failed to validate the user via OAuth token. "
@@ -124,86 +119,8 @@ def run_setup(verbose: int = 0):
         )
         exit(1)
 
-    # get the AWS access key credentials
-    try:
-        creds = api_client.get_aws_access(group_id)
-
-        aws_access_key = creds["access_key_id"]
-        aws_secret_access_key = creds["secret_access_key"]
-    except APIError as ae:
-        print(f"Failed to obtain AWS access key credentials: {ae}. "
-              f"Please try again or obtain another token at {PRODUCT_URL}/datasets#upload.")
-        exit(1)
-
-    # configure AWS CLI
-    outputs = []
-
-    def append_fn(line):
-        outputs.append(line)
-
-    try:
-        cmd = [
-            "aws",
-            "configure",
-            "set",
-            "region",
-            DEFAULT_AWS_REGION,
-            "--profile",
-            DEFAULT_AWS_PROFILE,
-        ]
-        run_cli_command(cmd, line_parser=append_fn)
-        cmd = [
-            "aws",
-            "configure",
-            "set",
-            "format",
-            DEFAULT_AWS_FORMAT,
-            "--profile",
-            DEFAULT_AWS_PROFILE,
-        ]
-        run_cli_command(cmd, line_parser=append_fn)
-        cmd = [
-            "aws",
-            "configure",
-            "set",
-            "aws_access_key_id",
-            aws_access_key,
-            "--profile",
-            DEFAULT_AWS_PROFILE,
-        ]
-        run_cli_command(cmd, line_parser=append_fn)
-        cmd = [
-            "aws",
-            "configure",
-            "set",
-            "aws_secret_access_key",
-            aws_secret_access_key,
-            "--profile",
-            DEFAULT_AWS_PROFILE,
-        ]
-        run_cli_command(cmd, line_parser=append_fn)
-    except Exception as e:
-        print(f"AWS configuration failure: {e}")
-        if verbose:
-            print("\n".join(outputs))
-        exit(1)
-
     if not check_aws_configuration(verbose):
         print("Configuration failed.")
-
-    print("Successfully obtained AWS access key credentials.")
-    print("-" * 50)
-    # checking access to S3
-    print("Verifying AWS access...")
-    # some retries to let the AWS access key propagate
-    from modelcat.connector.utils.aws import check_s3_access
-    try:
-        time.sleep(5)
-        check_s3_access(group_id, verbose=verbose > 0)
-    except Exception:
-        print("Verification failed... Please check your credentials or contact customer support.")
-        exit(1)
-    print("Verification successful.")
 
     # create the config file
     product_config = {

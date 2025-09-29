@@ -2,6 +2,7 @@ import logging as log
 import os
 import os.path as osp
 import shutil
+import time
 
 from modelcat.connector.utils import hash_dataset, run_cli_command
 import re
@@ -16,7 +17,7 @@ from datetime import datetime
 from modelcat.consts import PRODUCT_NAME, PRODUCT_S3_BUCKET, PRODUCT_URL
 from modelcat.connector.utils.api import APIConfig, ProductAPIClient, APIError
 from modelcat.connector.utils.common import format_local_datetime, UserChoice
-from modelcat.connector.utils.consts import PACKAGE_NAME, DEFAULT_AWS_PROFILE
+from modelcat.connector.utils.consts import PACKAGE_NAME, DEFAULT_AWS_FORMAT, DEFAULT_AWS_REGION
 
 from modelcat.connector.utils.aws import check_aws_configuration, check_s3_access
 import pkg_resources
@@ -26,9 +27,9 @@ class DatasetUploader:
     def __init__(
         self,
         dataset_root_dir: str,
+        working_dir: str,
         group_id: str,
         oauth_token: str = None,
-        working_dir: str = None,
         ignore_validation: bool = False,
         restore: UserChoice = UserChoice.NO,
         verbose: int = 0,  # 1 for info, 2 for debug
@@ -66,11 +67,6 @@ class DatasetUploader:
         self.dataset_name = self.normalize_ds_name(list(self.dataset_infos.keys())[0])
         self.s3_uri = f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/{str(uuid.uuid4())}/"
 
-        try:
-            check_s3_access(self.group_id, verbose=self.verbose > 0)
-        except Exception:
-            exit(1)
-
     def dataset_check(self):
         ds_infos = osp.join(self.dataset_root, "dataset_infos.json")
         validator_log_path = osp.join(self.dataset_root, "dataset_validator_log.txt")
@@ -85,7 +81,7 @@ class DatasetUploader:
             )
             return True
 
-        print("Veryfying dataset signature...")
+        print("Verifying dataset signature...")
         try:
             with open(validator_log_path) as fp:
                 text = fp.read()
@@ -109,8 +105,47 @@ class DatasetUploader:
             return False
 
         print("Done!")
+        print("-" * 50)
 
         return True
+
+    def obtain_s3_access(self, api_client: ProductAPIClient, group_id: str, verbose: bool = False):
+        # get the AWS access key credentials
+        print("Obtaining AWS access key credentials...")
+        try:
+            creds = api_client.get_aws_access(group_id)
+
+            aws_access_key = creds["access_key_id"]
+            aws_secret_access_key = creds["secret_access_key"]
+        except APIError as ae:
+            print(
+                f"Failed to obtain AWS access key credentials: {ae}. "
+                f"Please try again or obtain another token at {PRODUCT_URL}/datasets#upload."
+            )
+            exit(1)
+
+        # Required for authentication
+        os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key
+        os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_access_key
+        os.environ["AWS_DEFAULT_REGION"] = DEFAULT_AWS_REGION
+        os.environ["AWS_DEFAULT_OUTPUT"] = DEFAULT_AWS_FORMAT
+
+        print("Successfully obtained AWS access key credentials.")
+
+        # checking access to S3
+        print("Verifying AWS access...")
+        # some retries to let the AWS access key propagate
+        try:
+            time.sleep(5)
+            check_s3_access(group_id, verbose=verbose)
+        except Exception:
+            print(
+                f"Verification failed... Please try generating a new OAuth token at {PRODUCT_URL}/datasets#upload "
+                f"or contact customer support at support@modelcat.ai."
+            )
+            exit(1)
+
+        print("Verification successful.")
 
     def upload_s3(self, on_existing_dataset_name: str = None):
         api_config = APIConfig(
@@ -119,6 +154,9 @@ class DatasetUploader:
         )
         api_client = ProductAPIClient(api_config)
 
+        self.obtain_s3_access(api_client, self.group_id, verbose=self.verbose > 0)
+
+        print("-" * 50)
         print("Checking for an existing dataset with the same name...")
 
         datasets = api_client.list_datasets()
@@ -175,6 +213,8 @@ class DatasetUploader:
         num_files, size = self._count_files(
             self.dataset_root
         )  # len([name for name in os.listdir('.') if os.path.isfile(name)])
+
+        print("-" * 50)
         print(f"Found {num_files} files in the dataset: {self._convert_size(size)}")
 
         cmd = [
@@ -183,8 +223,6 @@ class DatasetUploader:
             "sync",
             self.dataset_root,
             self.s3_uri,
-            "--profile",
-            DEFAULT_AWS_PROFILE,
             "--exclude",
             "./.*/**"
         ]
@@ -233,10 +271,14 @@ class DatasetUploader:
                 ds_uuid = old_ds_uuid
 
             print("Running Dataset Analysis immediately after registration...")
-            api_client.submit_dataset_analysis(
+            da_data = api_client.submit_dataset_analysis(
                 dataset_uri=self.s3_uri,
                 group_id=self.group_id,
                 dataset_name=self.dataset_name,
+            )
+            print(
+                f"The dataset will be fully usable after the Dataset Analysis completes."
+                f"\nFollow the progress by visiting {PRODUCT_URL}{da_data['results_url']}"
             )
             print("-" * 100)
             print(
@@ -245,6 +287,8 @@ class DatasetUploader:
             )
         except APIError as ae:
             print(f"Dataset registration/upload failed. {PRODUCT_NAME} API error: {ae}")
+            print(f"Please try generating a new OAuth token at {PRODUCT_URL}/datasets#upload "
+                  f"or contact customer support at support@modelcat.ai")
             exit(1)
 
     def restore_files(self):

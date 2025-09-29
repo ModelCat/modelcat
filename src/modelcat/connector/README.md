@@ -81,7 +81,7 @@ This utility will upload your dataset to ModelCat.
                         ModelCatConnector (v0.0.1) - dataset validation utility
 
 ----------------------------------------------------------------------------------------------------
-Veryfying dataset signature...
+Verifying dataset signature...
 Done!
 S3 access verified
 Found 3693 files in the dataset: 505.73 MB

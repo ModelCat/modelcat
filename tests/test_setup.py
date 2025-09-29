@@ -11,13 +11,11 @@ class TestSetup(unittest.TestCase):
     @patch('modelcat.connector.setup.input')
     @patch('modelcat.connector.setup.getpass')
     @patch('modelcat.connector.setup.ProductAPIClient')
-    @patch('modelcat.connector.setup.run_cli_command')
     @patch('modelcat.connector.setup.check_aws_configuration')
-    @patch('modelcat.connector.utils.aws.check_s3_access')
     @patch('modelcat.connector.setup.os.makedirs')
     def test_run_setup_success(
-            self, mock_makedirs, mock_check_s3_access, mock_check_aws_config,
-            mock_run_cli, mock_api_client, mock_getpass, mock_input, mock_check_awscli
+            self, mock_makedirs, mock_check_aws_config,
+            mock_api_client, mock_getpass, mock_input, mock_check_awscli
     ):
         """Test a successful setup process."""
         # Mock AWS CLI check
@@ -38,9 +36,6 @@ class TestSetup(unittest.TestCase):
         # Mock AWS configuration check
         mock_check_aws_config.return_value = True
 
-        # Mock S3 access check
-        mock_check_s3_access.return_value = True
-
         # Run the setup function with mocked open
         with patch('builtins.open', mock_open()) as mock_file:
             run_setup()
@@ -54,16 +49,9 @@ class TestSetup(unittest.TestCase):
 
         # Verify ProductAPIClient was created and used
         mock_api_client.assert_called_once()
-        mock_client_instance.get_aws_access.assert_called_once_with("12345678-1234-1234-1234-123456789012")
-
-        # Verify AWS CLI commands were run (4 commands)
-        self.assertEqual(mock_run_cli.call_count, 4)
 
         # Verify AWS configuration was checked
         mock_check_aws_config.assert_called_once()
-
-        # Verify S3 access was checked
-        mock_check_s3_access.assert_called_once_with("12345678-1234-1234-1234-123456789012", verbose=False)
 
         # Verify config directory was created
         mock_makedirs.assert_called_once()
@@ -114,7 +102,7 @@ class TestSetup(unittest.TestCase):
         # Mock ProductAPIClient to raise an APIError
         from modelcat.connector.utils.api import APIError
         mock_client_instance = MagicMock()
-        mock_client_instance.get_aws_access.side_effect = APIError("API Error")
+        mock_client_instance.get_me.side_effect = APIError("API Error")
         mock_api_client.return_value = mock_client_instance
 
         # Run the setup function with exit expected

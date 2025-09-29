@@ -335,4 +335,4 @@ class ProductAPIClient(BaseAPIClient):
             error_msg = '; '.join(result.get('errors', ['Job submission failed.']))
             raise APIError(f"Job submission error: {error_msg}")
 
-        return result
+        return result["data"]
