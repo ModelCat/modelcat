@@ -14,6 +14,7 @@ import importlib.metadata
 from pycocotools.coco import COCO
 
 from modelcat.connector.utils.consts import MAX_DATASET_SIZE, MAX_DATASET_SIZE_STR
+from modelcat.connector.utils.common import UserChoice
 
 
 class DatasetValidator:
@@ -23,7 +24,7 @@ class DatasetValidator:
             dataset_root_dir: str,
             working_dir: str = None,
             auto_fix: bool = False,
-            auto_fix_2: str = "n"
+            auto_fix_2: UserChoice = UserChoice.NO,
     ):
 
         if not osp.exists(dataset_root_dir):
@@ -34,10 +35,12 @@ class DatasetValidator:
         self.image_dir = os.path.join(self.root_dir, 'images')
         self.ann_dir = os.path.join(self.root_dir, 'annotations')
         self.working_dir = working_dir
+        self.backup_dir = os.path.join(self.working_dir, '.backup')
         self.auto_fix = auto_fix
         self.log_filename = "dataset_validator_log.txt"
         self.auto_fix_2 = auto_fix_2
         self.restart_analysis = False
+        self.backed_up_files = set()
 
         self.messages = None
 
@@ -110,6 +113,7 @@ class DatasetValidator:
             else:
                 first_image = _get_first_image_from_dir(self.image_dir)
                 if first_image is not None:
+                    # No need to backup here as we're creating a new file, not modifying an existing one
                     shutil.copy(first_image, thumbnail_path)
                     log.debug(f"Auto-fix: thumbnail generated automatically from image '{first_image}'")
                 else:
@@ -284,7 +288,7 @@ class DatasetValidator:
                         )
                     else:
                         dataset_infos_json[dataset_name]["dataset_size"] = real_img_count
-                        _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                        self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                         log.debug(f"Auto-fix: changed dataset_size to {real_img_count}.")
             else:
                 if not self.auto_fix:
@@ -298,7 +302,7 @@ class DatasetValidator:
                     )
                 else:
                     dataset_infos_json[dataset_name]["dataset_size"] = real_img_count
-                    _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                    self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                     log.debug(f"Auto-fix: added dataset_size ({real_img_count} to dataset_infos.json")
         else:
             if not self.auto_fix:
@@ -310,7 +314,7 @@ class DatasetValidator:
                 )
             else:
                 dataset_infos_json[dataset_name]["dataset_size"] = real_img_count
-                _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                 log.debug(f"Auto-fix: added dataset_size ({real_img_count} to dataset_infos.json.")
         real_size_in_bytes = _calculate_coco_dataset_size(self.image_dir, self.ann_dir, ann_file_names)
 
@@ -334,7 +338,7 @@ class DatasetValidator:
                                                     f'using the dataset root directory.'})
                     else:
                         dataset_infos_json[dataset_name]["size_in_bytes"] = real_size_in_bytes
-                        _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                        self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                         log.debug(f"Auto-fix: changed size_in_bytes to {real_size_in_bytes}.")
             else:
                 if not self.auto_fix:
@@ -344,7 +348,7 @@ class DatasetValidator:
                                                 f'the dataset root directory.'})
                 else:
                     dataset_infos_json[dataset_name]["size_in_bytes"] = real_size_in_bytes
-                    _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                    self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                     log.debug(
                         f"Auto-fix: added size_in_bytes {dataset_info['size_in_bytes']} to dataset_infos.json."
                     )
@@ -358,7 +362,7 @@ class DatasetValidator:
                 )
             else:
                 dataset_infos_json[dataset_name]["size_in_bytes"] = real_size_in_bytes
-                _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                 log.debug(
                     f"Auto-fix: added size_in_bytes {dataset_info['size_in_bytes']} to dataset_infos.json."
                 )
@@ -493,10 +497,12 @@ class DatasetValidator:
                     for img_filename in imgs_without_anns:
                         img_path = osp.join(self.image_dir, img_filename)
                         if osp.exists(img_path):
+                            # Backup the file before removing it
+                            self.backup_file(img_path)
                             os.remove(img_path)
                     coco["images"] = [image for image in coco["images"] if
                                       image["file_name"] not in imgs_without_anns]
-                    _reload_coco(coco_file_path, coco)
+                    self.reload_coco(coco_file_path, coco)
                     imgs_without_anns = [
                         img["file_name"] for img in coco["images"] if not any(ann["image_id"] == img["id"]
                                                                               for ann in coco["annotations"])]
@@ -619,13 +625,16 @@ class DatasetValidator:
                                 ][0]
                             except IndexError:
                                 continue
-                            os.remove(osp.join(self.image_dir, img_to_delete["file_name"]))
+                            img_path = osp.join(self.image_dir, img_to_delete["file_name"])
+                            # Backup the file before removing it
+                            self.backup_file(img_path)
+                            os.remove(img_path)
                             # routing all annotations to the kept image
                             for ann in coco["annotations"]:
                                 if ann["image_id"] == img_id:
                                     ann["image_id"] = img_to_keep["id"]
                             coco["images"] = [img for img in coco["images"] if img["id"] != img_id]
-                _reload_coco(coco_path, coco)
+                self.reload_coco(coco_path, coco)
                 # restarting validation due to changes in the dataset
                 self.restart_analysis = True
                 return []
@@ -722,7 +731,7 @@ class DatasetValidator:
                                 for ann in anns_for_img:
                                     ann["image_id"] = img_to_remain["id"]
                                 del coco["images"][i]
-                    _reload_coco(ann_path, coco)
+                    self.reload_coco(ann_path, coco)
                     self.restart_analysis = True
                     return []
                 else:
@@ -774,7 +783,7 @@ class DatasetValidator:
                                 )
                             else:
                                 split_dict["num_examples"] = real_num_examples
-                                _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                                self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                                 log.debug(
                                     f"Auto-fix: changed num_examples for split {split_name} to {real_num_examples}"
                                 )
@@ -790,7 +799,7 @@ class DatasetValidator:
                             )
                         else:
                             split_dict["num_examples"] = real_num_examples
-                            _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                            self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                             log.debug(f"Auto-fix: added num_examples for split {split_name}: {real_num_examples}")
                 else:
                     if not self.auto_fix:
@@ -803,7 +812,7 @@ class DatasetValidator:
                         )
                     else:
                         split_dict["num_examples"] = real_num_examples
-                        _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                        self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                         log.debug(f"Auto-fix: added num_examples for split {split_name}: {real_num_examples}")
 
                 real_bytes = _calculate_split_size(coco_dict, self.image_dir)
@@ -821,7 +830,7 @@ class DatasetValidator:
                                 )
                             else:
                                 split_dict["num_bytes"] = real_bytes
-                                _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                                self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                                 log.debug(f"Auto-fix: changed num_bytes for split {split_name} to {real_bytes}")
                     else:
                         if not self.auto_fix:
@@ -835,7 +844,7 @@ class DatasetValidator:
                             )
                         else:
                             split_dict["num_bytes"] = real_bytes
-                            _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                            self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                             log.debug(f"Auto-fix: added num_bytes for split {split_name}: {real_bytes}")
                 else:
                     if not self.auto_fix:
@@ -848,7 +857,7 @@ class DatasetValidator:
                         )
                     else:
                         split_dict["num_bytes"] = real_bytes
-                        _reload_dataset_infos(dataset_infos_path, dataset_infos_json)
+                        self.reload_dataset_infos(dataset_infos_path, dataset_infos_json)
                         log.debug(f"Auto-fix: added num_bytes for split {split_name}: {real_bytes}")
             except Exception:
                 split_messages.append(
@@ -917,12 +926,73 @@ class DatasetValidator:
         return []
 
     def handle_permission(self, message):
-        if self.auto_fix_2 == "p":
+        if self.auto_fix_2 == UserChoice.PROMPT:
             return input(message) == 'y'
-        elif self.auto_fix_2 == "y":
+        elif self.auto_fix_2 == UserChoice.YES:
             return True
         else:
             return False
+
+    def backup_file(self, file_path):
+        """
+        Backup a file to the .backup directory, preserving its relative path.
+
+        Args:
+            file_path (str): The full path to the file to backup
+
+        Returns:
+            bool: True if the file was backed up successfully, False otherwise
+        """
+        if not osp.exists(file_path):
+            return False
+
+        # Create the backup directory if it doesn't exist
+        os.makedirs(self.backup_dir, exist_ok=True)
+
+        # Get the relative path of the file from the root directory
+        rel_path = osp.relpath(file_path, self.root_dir)
+        backup_path = osp.join(self.backup_dir, rel_path)
+
+        # Create the directory structure in the backup directory
+        os.makedirs(osp.dirname(backup_path), exist_ok=True)
+
+        # Copy the file to the backup directory
+        try:
+            if (file_path, backup_path) not in self.backed_up_files:
+                # if the file is already backed up, we don't overwrite
+                shutil.copy2(file_path, backup_path)
+            self.backed_up_files.add((file_path, backup_path))
+
+            with open(osp.join(self.backup_dir, "backed_up_files.txt"), "w") as file:
+                for item in self.backed_up_files:
+                    file.write(f"{item[0]} {item[1]}\n")
+
+            return True
+        except Exception as e:
+            print(f"Failed to backup file {file_path}: {e}")
+            return False
+
+    def reload_dataset_infos(self, dataset_infos_path, dataset_info_dict):
+        """
+        Backup the dataset_infos.json file and then reload it with new content.
+
+        Args:
+            dataset_infos_path (str): Path to the dataset_infos.json file
+            dataset_info_dict (dict): New content for the file
+        """
+        self.backup_file(dataset_infos_path)
+        _reload_dataset_infos(dataset_infos_path, dataset_info_dict)
+
+    def reload_coco(self, coco_file_path, coco_dict):
+        """
+        Backup the COCO annotation file and then reload it with new content.
+
+        Args:
+            coco_file_path (str): Path to the COCO annotation file
+            coco_dict (dict): New content for the file
+        """
+        self.backup_file(coco_file_path)
+        _reload_coco(coco_file_path, coco_dict)
 
 
 def _count_imgs_in_dir(directory: str) -> int:
@@ -1041,7 +1111,7 @@ def validate_cli():
     parser.add_argument('--verbose', '-v', action='count', required=False, default=0,
                         help="Verbosity level: -v, -vv")
 
-    args, _ = parser.parse_known_args()
+    args = parser.parse_args()
 
     modelcatconnector_version = importlib.metadata.version("modelcat")
     print(f'ModelCatConnector (v{modelcatconnector_version}) - dataset validation utility'.center(100))
@@ -1051,13 +1121,13 @@ def validate_cli():
 
     dataset_path = args.dataset_path
     auto_fix = args.auto_fix
-    auto_fix_2 = args.auto_fix_2
+    auto_fix_2 = UserChoice(args.auto_fix_2)
 
     dataset_validator = DatasetValidator(
         dataset_root_dir=dataset_path,
         working_dir=dataset_path,
         auto_fix=auto_fix,
-        auto_fix_2=auto_fix_2
+        auto_fix_2=auto_fix_2,
     )
     while True:
         messages, restart = dataset_validator.validate_dataset()
@@ -1070,6 +1140,12 @@ def validate_cli():
 
     print("\n" + " Summary: ".center(100, "-"))
     dataset_validator.create_validation_mark()
+
+    if len(dataset_validator.backed_up_files) > 0:
+        print(
+            f"\nDue to level-2 auto-fix, several dataset files were modified. "
+            f"\nThe original files have been backed up to directory '{dataset_validator.backup_dir}'"
+        )
 
 
 if __name__ == "__main__":

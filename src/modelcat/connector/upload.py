@@ -1,6 +1,8 @@
 import logging as log
 import os
 import os.path as osp
+import shutil
+
 from modelcat.connector.utils import hash_dataset, run_cli_command
 import re
 import json
@@ -13,7 +15,7 @@ from datetime import datetime
 
 from modelcat.consts import PRODUCT_NAME, PRODUCT_S3_BUCKET, PRODUCT_URL
 from modelcat.connector.utils.api import APIConfig, ProductAPIClient, APIError
-from modelcat.connector.utils.common import format_local_datetime
+from modelcat.connector.utils.common import format_local_datetime, UserChoice
 from modelcat.connector.utils.consts import PACKAGE_NAME, DEFAULT_AWS_PROFILE
 
 from modelcat.connector.utils.aws import check_aws_configuration, check_s3_access
@@ -26,13 +28,19 @@ class DatasetUploader:
         dataset_root_dir: str,
         group_id: str,
         oauth_token: str = None,
+        working_dir: str = None,
         ignore_validation: bool = False,
+        restore: UserChoice = UserChoice.NO,
         verbose: int = 0,  # 1 for info, 2 for debug
     ):
         self.dataset_root = dataset_root_dir
         self.group_id = group_id
         self.verbose = verbose
         self.oauth_token = oauth_token
+        self.restore = restore
+        self.working_dir = working_dir
+        self.backup_dir = osp.join(self.working_dir, ".backup")
+        self.backed_up_files = list()
 
         if not self.is_valid_uuid(self.group_id):
             print(
@@ -177,6 +185,8 @@ class DatasetUploader:
             self.s3_uri,
             "--profile",
             DEFAULT_AWS_PROFILE,
+            "--exclude",
+            "./.*/**"
         ]
 
         print("")
@@ -236,6 +246,52 @@ class DatasetUploader:
         except APIError as ae:
             print(f"Dataset registration/upload failed. {PRODUCT_NAME} API error: {ae}")
             exit(1)
+
+    def restore_files(self):
+        """
+        Restore files from backup based on the restore UserChoice parameter.
+        """
+        if self.restore == UserChoice.NO:
+            return
+
+        restore_files = False
+        if self.restore == UserChoice.YES:
+            restore_files = True
+        elif self.restore == UserChoice.PROMPT:
+            while True:
+                restore_files_input = input(
+                    "Do you want to restore modified files to their original state? (y/n): "
+                )
+                if restore_files_input not in ["y", "n"]:
+                    print("Please enter 'y' to restore and 'n' to skip.")
+                else:
+                    restore_files = restore_files_input == "y"
+                    break
+
+        if restore_files:
+            if osp.exists(osp.join(self.backup_dir, "backed_up_files.txt")):
+                try:
+                    with open(osp.join(self.backup_dir, "backed_up_files.txt")) as f:
+                        for line in f:
+                            original, backup = line.strip().split(None, 1)
+                            self.backed_up_files.append((original, backup))
+                except Exception:
+                    print(
+                        "Failed to load backed up files. Dataset files couldn't be restored."
+                    )
+                    exit(1)
+
+            for original_path, backup_path in self.backed_up_files:
+                try:
+                    # Create the directory structure if it doesn't exist
+                    os.makedirs(osp.dirname(original_path), exist_ok=True)
+                    # Copy the file back from backup
+                    shutil.copy2(backup_path, original_path)
+                    print(f"Restored file: {original_path}")
+                except Exception as e:
+                    print(f"Failed to restore file {original_path}: {e}")
+        else:
+            print("Restoring aborted.")
 
     @staticmethod
     def _count_files(folder: str):
@@ -303,6 +359,18 @@ def upload_cli():
         ),
     )
     parser.add_argument(
+        "--restore",
+        "-r",
+        choices=["n", "y", "p"],
+        default="n",
+        help=(
+            "Restore files from backup after validation.\n"
+            "  n : don't restore files (default)\n"
+            "  y : restore files automatically\n"
+            "  p : prompt for restore"
+        ),
+    )
+    parser.add_argument(
         "--verbose", "-v", action="count", default=0, help="Verbosity level: -v, -vv"
     )
 
@@ -331,14 +399,21 @@ def upload_cli():
     oauth_token = platform_config.get("oauth_token", None)
     log.info(f"Group ID: {group_id}")
 
+    restore = UserChoice(args.restore)
+
     dsu = DatasetUploader(
         group_id=group_id,
         oauth_token=oauth_token,
         dataset_root_dir=args.dataset_path,
+        working_dir=args.dataset_path,
         verbose=args.verbose,
+        restore=restore,
     )
 
     dsu.upload_s3(on_existing_dataset_name=args.on_existing_dataset_name)
+
+    # Restore files if needed
+    dsu.restore_files()
 
 
 if __name__ == "__main__":

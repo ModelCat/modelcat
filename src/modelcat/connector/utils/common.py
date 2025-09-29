@@ -1,5 +1,13 @@
 from datetime import datetime, timezone
 
+from enum import Enum
+
+
+class UserChoice(Enum):
+    YES = "y"
+    NO = "n"
+    PROMPT = "p"
+
 
 def format_local_datetime(dt: datetime, fmt: str = "%B %d, %Y %H:%M:%S") -> str:
     """
