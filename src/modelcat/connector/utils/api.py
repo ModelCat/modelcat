@@ -4,7 +4,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Dict, List
 
 from modelcat.connector.utils.consts import PACKAGE_NAME
 
@@ -12,7 +12,7 @@ from modelcat.connector.utils.consts import PACKAGE_NAME
 @dataclass
 class APIConfig:
     """Configuration for the API client"""
-    base_url: Union[str, list[str]]
+    base_url: Union[str, List[str]]
     oauth_token: Optional[str] = None
     timeout: int = 120
     max_retries: int = 3
@@ -237,7 +237,7 @@ class ProductAPIClient(BaseAPIClient):
             dataset_uuid: str,
             dataset_infos: dict,
             hidden: bool = False,
-            task_types: Optional[list[str]] = None,
+            task_types: Optional[List[str]] = None,
             access: Optional[dict] = None,
     ):
         body = {"datasetInfos": dataset_infos}
@@ -262,7 +262,7 @@ class ProductAPIClient(BaseAPIClient):
 
     def list_datasets(
         self,
-        fields: Optional[list[str]] = None,
+        fields: Optional[List[str]] = None,
         include_dataset_infos: bool = False
     ):
         """
