@@ -105,22 +105,16 @@ class DatasetValidator:
 
         thumbnail_path = osp.join(self.root_dir, "thumbnail.jpg")
         if not osp.exists(thumbnail_path):
-            if not self.auto_fix:
-                self.messages.append({'type': 'warning', 'message': 'The dataset is missing the "thumbnail.jpg" file. '
-                                                                    'Pick one image from the dataset, name it as '
-                                                                    '"thumbnail.jpg" and place it inside the '
-                                                                    'dataset root directory.'})
+            first_image = _get_first_image_from_dir(self.image_dir)
+            if first_image is not None:
+                # No need to backup here as we're creating a new file, not modifying an existing one
+                shutil.copy(first_image, thumbnail_path)
+                log.debug(f"Auto-fix: thumbnail generated automatically from image '{first_image}'")
             else:
-                first_image = _get_first_image_from_dir(self.image_dir)
-                if first_image is not None:
-                    # No need to backup here as we're creating a new file, not modifying an existing one
-                    shutil.copy(first_image, thumbnail_path)
-                    log.debug(f"Auto-fix: thumbnail generated automatically from image '{first_image}'")
-                else:
-                    self.messages.append({
-                        'type': 'error',
-                        'message': 'Couldn\'t find any image to serve as a thumbnail for the dataset.'
-                    })
+                self.messages.append({
+                    'type': 'error',
+                    'message': 'Couldn\'t find any image to serve as a thumbnail for the dataset.'
+                })
 
         dataset_info_messages, ann_file_names, split_names, label_names = self.validate_dataset_infos_file(
             dataset_infos_path
