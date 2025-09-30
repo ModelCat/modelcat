@@ -1137,7 +1137,7 @@ def validate_cli():
 
     if len(dataset_validator.backed_up_files) > 0:
         print(
-            f"\nDue to level-2 auto-fix, several dataset files were modified. "
+            f"\nDue to auto-fix, several dataset files were modified. "
             f"\nThe original files have been backed up to directory '{dataset_validator.backup_dir}'"
         )
 

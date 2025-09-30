@@ -193,7 +193,7 @@ class DatasetUploader:
                 # if the user wants to overwrite automatically but there are multiple datasets with the same name,
                 # we can't select a random dataset.
                 if choice == "o" and len_same_name == 1:
-                    choice = "0"
+                    choice = "1"
                 else:
                     print("Multiple datasets with the same name found. Aborting upload. "
                           "Try rerunning in interactive mode to select which dataset to overwrite.")
