@@ -109,7 +109,8 @@ dependencies = [ # Optional
   "scandir",
   "pycocotools",
   "requests>=2,<3",
-  "retry"
+  "retry",
+  "Pillow"
 ]
 
 # List additional groups of dependencies here (e.g. development

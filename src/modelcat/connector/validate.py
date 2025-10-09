@@ -1,3 +1,4 @@
+
 import hashlib
 import json
 import argparse
@@ -12,13 +13,13 @@ import shutil
 from modelcat.connector.utils import hash_dataset
 import importlib.metadata
 from pycocotools.coco import COCO
+from PIL import Image
 
 from modelcat.connector.utils.consts import MAX_DATASET_SIZE, MAX_DATASET_SIZE_STR
 from modelcat.connector.utils.common import UserChoice
 
 
 class DatasetValidator:
-
     def __init__(
             self,
             dataset_root_dir: str,
@@ -700,6 +701,21 @@ class DatasetValidator:
             return []
         except Exception:
             return []
+    
+    def autofill_img_dim(self, img):
+        """
+        Auto-compute and fill missing width/height for an image dict using Pillow.
+        Returns True if successful.
+        """
+        image_path = os.path.join(self.image_dir, img["file_name"])
+        try:
+            with Image.open(image_path) as im:
+                img["width"], img["height"] = im.size
+            log.info(f"Computed dimensions for {img['file_name']}: width={img['width']}, height={img['height']}")
+            return True
+        except Exception as e:
+            log.error(f"Failed to compute dimensions for {img['file_name']}: {e}")
+            return False
 
     def check_split_image_duplicates(self, ann_path: str):
         try:
@@ -902,10 +918,21 @@ class DatasetValidator:
                 return self._create_param_error_message(coco_file_name, "images.id")
             if "file_name" not in img:
                 return self._create_param_error_message(coco_file_name, "images.file_name")
-            if "width" not in img:
-                return self._create_param_error_message(coco_file_name, "images.width")
-            if "height" not in img:
-                return self._create_param_error_message(coco_file_name, "images.height")
+            # Check width and height - Autofill if missing
+            m_width = "width" not in img
+            m_height = "height" not in img
+            if (m_width or m_height):
+                if self.auto_fix_2 == UserChoice.YES:
+                    if not self.autofill_img_dim(img):
+                        if m_width:
+                            return self._create_param_error_message(coco_file_name, "images.width")
+                        if m_height:
+                            return self._create_param_error_message(coco_file_name, "images.height")
+                else:
+                    if m_width:
+                        return self._create_param_error_message(coco_file_name, "images.width")
+                    if m_height:
+                        return self._create_param_error_message(coco_file_name, "images.height")
 
         # annotations.* checks
         for ann in coco["annotations"]:
