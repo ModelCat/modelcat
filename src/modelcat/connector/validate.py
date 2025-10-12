@@ -12,7 +12,8 @@ import shutil
 from .utils import hash_dataset
 import importlib.metadata
 from pycocotools.coco import COCO
-
+from .utils.schemas.datainfo import DatasetInfo
+from .utils.schemas.annotation import CocoDataset
 
 class DatasetValidator:
 
@@ -349,6 +350,17 @@ class DatasetValidator:
                     f"Auto-fix: added size_in_bytes {dataset_info['size_in_bytes']} to dataset_infos.json."
                 )
 
+        # run pydantic validation
+        try:
+            DatasetInfo.parse_obj(dataset_info)
+        except Exception as e:
+            messages.append(
+                {
+                    "type": "error",
+                    "message": f'"dataset_infos.json" file validation error: {e}',
+                }
+            )
+        
         return messages, ann_file_names, split_names, label_names
 
     def validate_annotations_and_images(
@@ -571,6 +583,17 @@ class DatasetValidator:
                 {
                     "type": "error",
                     "message": f'The annotation file "{coco_file_name}" is not formatted correctly: {e}.',
+                }
+            )
+            
+        # run pydantic validation
+        try:
+            CocoDataset.parse_obj(coco)
+        except Exception as e:
+            messages.append(
+                {
+                    "type": "error",
+                    "message": f'"{coco_file_path}" file validation error: {e}',
                 }
             )
 
