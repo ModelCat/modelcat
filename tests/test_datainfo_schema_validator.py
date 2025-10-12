@@ -198,7 +198,7 @@ class TestSplitsWithDicts(unittest.TestCase):
             DatasetInfo.parse_obj(payload)
 
     def test_splitinfo_required_fields_via_dict(self):
-        # Split missing required 'dataset_name'
+        # split missing required 'dataset_name'
         payload = {
             "task_templates": [{"task": "classification", "labels": ["x"]}],
             "splits": {
@@ -241,7 +241,7 @@ class TestFeaturesWithDicts(unittest.TestCase):
             "features": {
                 "image": {"_type": "Image"},
                 "labels": {"_type": "Sequence"},
-                "image/filename": {"_type": "Text"},  # extra key allowed? depends on your Features.Config
+                "image/filename": {"_type": "Text"},
                 "objects": {
                     "_type": "Sequence",
                     "objects_bbox": {"_type": "BBoxFeature"},
@@ -249,12 +249,8 @@ class TestFeaturesWithDicts(unittest.TestCase):
                 },
             },
         }
-        try:
-            di = DatasetInfo.parse_obj(payload)
-            self.assertEqual(di.features.image.type, "Image")
-        except ValidationError as e:
-            # If you disallow extras, assert that it does fail.
-            self.assertIsInstance(e, ValidationError)
+        di = DatasetInfo.parse_obj(payload)
+        self.assertEqual(di.features.image.type, "Image")
 
 
 class TestDatasetInfosWithDicts(unittest.TestCase):
