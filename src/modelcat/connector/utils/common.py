@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
-
 from enum import Enum
+from importlib import metadata as ilmd
 
 
 class UserChoice(Enum):
@@ -25,3 +25,16 @@ def format_local_datetime(dt: datetime, fmt: str = "%B %d, %Y %H:%M:%S") -> str:
         dt = dt.replace(tzinfo=timezone.utc)
     local_dt = dt.astimezone()  # converts to system local timezone
     return local_dt.strftime(fmt)
+
+
+def resolve_version(name: str) -> str:
+    try:
+        # Prefer installed distribution metadata
+        return ilmd.version(name)
+    except ilmd.PackageNotFoundError:
+        # Fallback: try module __version__ (useful in editable/dev mode)
+        try:
+            mod = __import__(name)
+            return getattr(mod, "__version__", "unknown")
+        except Exception:
+            return "unknown"

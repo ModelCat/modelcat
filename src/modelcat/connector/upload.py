@@ -14,13 +14,12 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
-from modelcat.consts import PRODUCT_NAME, PRODUCT_S3_BUCKET, PRODUCT_URL
+from modelcat.consts import PACKAGE_NAME as ROOT_PACKAGE_NAME, PRODUCT_NAME, PRODUCT_S3_BUCKET, PRODUCT_URL
 from modelcat.connector.utils.api import APIConfig, ProductAPIClient, APIError
-from modelcat.connector.utils.common import format_local_datetime, UserChoice
+from modelcat.connector.utils.common import format_local_datetime, UserChoice, resolve_version
 from modelcat.connector.utils.consts import PACKAGE_NAME, DEFAULT_AWS_FORMAT, DEFAULT_AWS_REGION
 
 from modelcat.connector.utils.aws import check_aws_configuration, check_s3_access
-import pkg_resources
 
 
 class DatasetUploader:
@@ -421,7 +420,7 @@ def upload_cli():
     args = parser.parse_args()
 
     print(
-        f'{PACKAGE_NAME} (v{pkg_resources.get_distribution("modelcat").version}) '
+        f'{PACKAGE_NAME} (v{resolve_version(ROOT_PACKAGE_NAME)}) '
         f'- dataset validation utility'.center(100)
     )
     print("\n" + "-" * 100)

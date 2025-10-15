@@ -222,7 +222,7 @@ class TestDatasetUploader(unittest.TestCase):
         mock_client_instance.submit_dataset_analysis.assert_called_once()
 
     @patch('modelcat.connector.upload.argparse.ArgumentParser.parse_args')
-    @patch('modelcat.connector.upload.pkg_resources.get_distribution')
+    @patch('modelcat.connector.utils.common.resolve_version', return_value="1.0.0")
     @patch('modelcat.connector.upload.osp.join')
     @patch('builtins.open', new_callable=mock_open, read_data=json.dumps({
         "group_id": "12345678-1234-1234-1234-123456789012",
