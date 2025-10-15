@@ -240,6 +240,22 @@ class ProductAPIClient(BaseAPIClient):
             task_types: Optional[List[str]] = None,
             access: Optional[dict] = None,
     ):
+        """
+        Update an existing dataset using the /api/datasets/{dataset_uuid} endpoint.
+
+        Args:
+            dataset_uuid: UUID of the dataset to update.
+            dataset_infos: Dict containing updated dataset metadata/info.
+            hidden: Whether the dataset should be hidden.
+            task_types: List of task types associated with the dataset.
+            access: Dict containing access control settings for groups.
+
+        Returns:
+            Dict with the API response.
+
+        Raises:
+            APIError: If update fails.
+        """
         body = {"datasetInfos": dataset_infos}
         if hidden is not None:
             body["hidden"] = hidden
