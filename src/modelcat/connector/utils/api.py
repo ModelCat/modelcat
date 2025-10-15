@@ -124,9 +124,10 @@ class BaseAPIClient:
             raise APIError(f"Failed to parse API response: {str(e)}")
         except requests.exceptions.RequestException as e:
             if result is not None:
-                raise APIError(f"""API request failed with the following details:
+                raise APIError(
+                    f"""API request failed with the following details:
 {json.dumps(result, indent=2)}"""
-                               )
+                )
             raise APIError(f"Request failed: {str(e)}")
 
     def __del__(self):
