@@ -99,13 +99,19 @@ class TestSetup(unittest.TestCase):
         mock_check_awscli.assert_called_once()
 
     @patch('modelcat.connector.setup.run_setup')
-    def test_setup_cli(self, mock_run_setup):
+    @patch('argparse.ArgumentParser.parse_args')
+    def test_setup_cli(self, mock_parse_args, mock_run_setup):
         """Test the setup_cli function."""
+        # Mock the parse_args method to return a namespace with debug=False
+        mock_args = unittest.mock.Mock()
+        mock_args.debug = False
+        mock_parse_args.return_value = mock_args
+
         # Run the CLI function
         setup_cli()
 
-        # Verify run_setup was called with verbose=1
-        mock_run_setup.assert_called_once_with(verbose=1)
+        # Verify run_setup was called with verbose=0
+        mock_run_setup.assert_called_once_with(verbose=0)
 
     @patch('modelcat.connector.setup.check_awscli')
     @patch('modelcat.connector.setup.input')
