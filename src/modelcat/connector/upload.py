@@ -111,7 +111,7 @@ class DatasetUploader:
 
     def obtain_s3_access(self, api_client: ProductAPIClient, group_id: str, verbose: bool = False):
         # get the AWS access key credentials
-        print("Obtaining AWS access key credentials...")
+        print("Obtaining platform access key credentials...")
         try:
             creds = api_client.get_aws_access(group_id)
 
@@ -119,7 +119,7 @@ class DatasetUploader:
             aws_secret_access_key = creds["secret_access_key"]
         except APIError as ae:
             print(
-                f"Failed to obtain AWS access key credentials: {ae}. "
+                f"Failed to obtain platform access key credentials: {ae}. "
                 f"Please try again or obtain another token at {PRODUCT_URL}/datasets#upload."
             )
             exit(1)
@@ -130,10 +130,10 @@ class DatasetUploader:
         os.environ["AWS_DEFAULT_REGION"] = DEFAULT_AWS_REGION
         os.environ["AWS_DEFAULT_OUTPUT"] = DEFAULT_AWS_FORMAT
 
-        print("Successfully obtained AWS access key credentials.")
+        print("Successfully obtained platform access key credentials.")
 
         # checking access to S3
-        print("Verifying AWS access...")
+        print("Verifying platform access...")
         # some retries to let the AWS access key propagate
         try:
             time.sleep(5)
@@ -176,9 +176,9 @@ class DatasetUploader:
                         f"[{i + 1}]  - {ds['name']} ({ds['uuid']}) created on {creation_datetime_nice} with URI {ds['path']}"
                     )
                 print(
-                    f"To proceed, enter one of the following options: "
-                    f"\n  - 'n' to cancel the upload. You can change the dataset name in dataset_infos.json and try again."
-                    f"\n  - 'y' to proceed with the upload. You will be able to view and use all datasets with the same name."
+                    "To proceed, enter one of the following options: "
+                    "\n  - 'n' to cancel the upload. You can change the dataset name in dataset_infos.json and try again."
+                    "\n  - 'y' to proceed with the upload. You will be able to view and use all datasets with the same name."
                     f"\n  - '{1}' - '{len_same_name}' to overwrite an existing dataset with that index."
                 )
                 choice = input("> ")
@@ -195,7 +195,7 @@ class DatasetUploader:
                 if choice == "o" and len_same_name == 1:
                     choice = "1"
                 else:
-                    print("Multiple datasets with the same name found. Aborting upload. "
+                    print("Multiple datasets with the same name found. Aborting upload.\n"
                           "Try rerunning in interactive mode to select which dataset to overwrite.")
                     exit(1)
                 choice_idx = int(choice) - 1
