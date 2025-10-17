@@ -13,7 +13,7 @@ ModelCat is currently supported on:
 
 ### Prerequisites
 * `AWS CLI v2`. For more information consult the installation guide: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-* `Python >=3.7` installation (you can use `conda` or virtual environments `venv`)
+* `Python >=3.8` installation (you can use `conda` or virtual environments `venv`)
 * `git` (if you intend to clone ModelCatConnector directly from github)
 
 ### Installing by cloning from GitHub
