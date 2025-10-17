@@ -20,4 +20,4 @@ def _get_dataset_path() -> str:
         print(ds_path)
         return ds_path
 
-    raise FileExistsError(f'`{datasets_folder}` cannot be located')
+    raise FileNotFoundError(f'`{datasets_folder}` cannot be located')
