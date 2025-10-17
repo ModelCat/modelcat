@@ -217,7 +217,7 @@ class Annotation(BaseModel):
         if v is None:
             return []
         
-        # empty bbox is acceptible
+        # empty bbox is acceptable
         if len(v) == 0:
             return v
 
