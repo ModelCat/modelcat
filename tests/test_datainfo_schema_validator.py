@@ -32,9 +32,7 @@ def minimal_splits_dict():
 class TestTaskTemplateWithDicts(unittest.TestCase):
     def test_classification_minimal_dict(self):
         payload = {
-            "task_templates": [
-                {"task": "classification", "labels": ["cat", "dog"]}
-            ],
+            "task_templates": [{"task": "classification", "labels": ["cat", "dog"]}],
             "splits": minimal_splits_dict(),
         }
         di = DatasetInfo.parse_obj(payload)
@@ -43,9 +41,7 @@ class TestTaskTemplateWithDicts(unittest.TestCase):
 
     def test_detection_minimal_dict(self):
         payload = {
-            "task_templates": [
-                {"task": "detection", "labels": ["person"]}
-            ],
+            "task_templates": [{"task": "detection", "labels": ["person"]}],
             "splits": minimal_splits_dict(),
         }
         di = DatasetInfo.parse_obj(payload)
@@ -67,7 +63,11 @@ class TestTaskTemplateWithDicts(unittest.TestCase):
             with self.subTest(bad=bad):
                 payload = {
                     "task_templates": [
-                        {"task": "keypoints", "labels": ["person"], "num_keypoints": bad}
+                        {
+                            "task": "keypoints",
+                            "labels": ["person"],
+                            "num_keypoints": bad,
+                        }
                     ],
                     "splits": minimal_splits_dict(),
                 }
@@ -245,7 +245,11 @@ class TestFeaturesWithDicts(unittest.TestCase):
                 "objects": {
                     "_type": "Sequence",
                     "objects_bbox": {"_type": "BBoxFeature"},
-                    "objects_label": {"_type": "ClassLabel", "num_classes": 1, "names": ["person"]},
+                    "objects_label": {
+                        "_type": "ClassLabel",
+                        "num_classes": 1,
+                        "names": ["person"],
+                    },
                 },
             },
         }
@@ -270,9 +274,7 @@ class TestDatasetInfosWithDicts(unittest.TestCase):
         self.assertEqual(infos["people_det"].task_templates[0].task, "detection")
 
     def test_parse_from_json_string(self):
-        data = {
-            "my_ds": self.mk_di_dict("classification")
-        }
+        data = {"my_ds": self.mk_di_dict("classification")}
         json_str = json.dumps(data)
         infos = DatasetInfos.parse_raw(json_str)
         self.assertIn("my_ds", infos.__root__)
@@ -284,13 +286,11 @@ class TestDatasetInfosWithDicts(unittest.TestCase):
         }
         with self.assertRaises(ValidationError):
             DatasetInfos.parse_obj(bad)
-    
+
     def test_load_sample_dataset_info_classification(self):
-        ds_path = osp.join(
-            _get_dataset_path(), "classification_sample"
-        )
+        ds_path = osp.join(_get_dataset_path(), "classification_sample")
         datainfo_path = osp.join(ds_path, "dataset_infos.json")
-        with open(datainfo_path, 'r') as f:
+        with open(datainfo_path, "r") as f:
             di_dict = json.load(f)
         di = DatasetInfos.parse_obj(di_dict)["classification_sample"]
         self.assertEqual(di.task_templates[0].task, "classification")
@@ -299,11 +299,9 @@ class TestDatasetInfosWithDicts(unittest.TestCase):
         self.assertIn("test", di.splits)
 
     def test_load_sample_dataset_info_object_detection(self):
-        ds_path = osp.join(
-            _get_dataset_path(), "objectdetection_sample"
-        )
+        ds_path = osp.join(_get_dataset_path(), "objectdetection_sample")
         datainfo_path = osp.join(ds_path, "dataset_infos.json")
-        with open(datainfo_path, 'r') as f:
+        with open(datainfo_path, "r") as f:
             di_dict = json.load(f)
         di = DatasetInfos.parse_obj(di_dict)["objectdetection_sample"]
         self.assertEqual(di.task_templates[0].task, "detection")
@@ -312,11 +310,9 @@ class TestDatasetInfosWithDicts(unittest.TestCase):
         self.assertIn("test", di.splits)
 
     def test_load_sample_dataset_info_keypoint_detection(self):
-        ds_path = osp.join(
-            _get_dataset_path(), "keypoints_sample"
-        )
+        ds_path = osp.join(_get_dataset_path(), "keypoints_sample")
         datainfo_path = osp.join(ds_path, "dataset_infos.json")
-        with open(datainfo_path, 'r') as f:
+        with open(datainfo_path, "r") as f:
             di_dict = json.load(f)
         di = DatasetInfos.parse_obj(di_dict)["keypoints_sample"]
         self.assertEqual(di.task_templates[0].task, "keypoints")

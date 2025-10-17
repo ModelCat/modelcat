@@ -16,7 +16,9 @@ import logging
 from getpass_asterisk.getpass_asterisk import getpass_asterisk as getpass
 
 
-def mask_modelcat_token(token: str, show_prefix: int = 3, show_suffix: int = 3, mask_len: int = 12) -> str:
+def mask_modelcat_token(
+    token: str, show_prefix: int = 3, show_suffix: int = 3, mask_len: int = 12
+) -> str:
     """
     Validate and mask a token of the form: <int>_<40 hex chars>.
     Example output: 1_123********678
@@ -27,7 +29,7 @@ def mask_modelcat_token(token: str, show_prefix: int = 3, show_suffix: int = 3, 
         # Don’t leak invalid input; show a generic masked example length
         return "?:***" + "*" * mask_len + "***"
 
-    group_id, hexpart = m.groups()             # e.g. "1", "123456...40hex..."
+    group_id, hexpart = m.groups()  # e.g. "1", "123456...40hex..."
     head = hexpart[:show_prefix]
     tail = hexpart[-show_suffix:] if show_suffix else ""
     return f"{group_id}_{head}{'*' * mask_len}{tail}"
@@ -71,7 +73,8 @@ def run_setup(verbose: int = 0):
 
     print(
         f"Please enter your {PRODUCT_NAME} credentials (Group ID and OAuth Token)."
-        f"\nYou can obtain them at {PRODUCT_URL}/datasets#upload.\n")
+        f"\nYou can obtain them at {PRODUCT_URL}/datasets#upload.\n"
+    )
     while 1:
         previous_group_clause = f" [{group_id_old}]" if group_id_old is not None else ""
         group_id = input(f"{PRODUCT_NAME} Group ID{previous_group_clause}: ")
@@ -86,10 +89,16 @@ def run_setup(verbose: int = 0):
             )
 
     while 1:
-        previous_token_clause = f" [{mask_modelcat_token(oauth_token_old)}]" if oauth_token_old is not None else ""
+        previous_token_clause = (
+            f" [{mask_modelcat_token(oauth_token_old)}]"
+            if oauth_token_old is not None
+            else ""
+        )
 
         try:
-            oauth_token = getpass(f"{PRODUCT_NAME} OAuth Token{previous_token_clause}: ")
+            oauth_token = getpass(
+                f"{PRODUCT_NAME} OAuth Token{previous_token_clause}: "
+            )
         except EOFError:
             # if user enters an empty string, use the old value
             oauth_token = ""
@@ -144,9 +153,10 @@ def run_setup(verbose: int = 0):
 
 
 def setup_cli():
-
     parser = argparse.ArgumentParser(description="Run ModelCat setup wizard.")
-    parser.add_argument("--debug", default=False, action="store_true", help="Enable debug logging")
+    parser.add_argument(
+        "--debug", default=False, action="store_true", help="Enable debug logging"
+    )
     args = parser.parse_args()
 
     if args.debug:

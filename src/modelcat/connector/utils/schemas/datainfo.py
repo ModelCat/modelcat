@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, validator, root_validator
 
+
 class ImageFeature(BaseModel):
     """
     Declarative descriptor for an image feature in the dataset schema.
@@ -13,11 +14,16 @@ class ImageFeature(BaseModel):
     type: Literal["Image"]
         Discriminator that identifies this feature as an image.
     """
+
     id: Optional[Any] = None
-    type: Literal["Image"] = Field(alias="_type") # because fields starting with an underscore are treated as private attributes by default
-    
+    type: Literal["Image"] = Field(
+        alias="_type"
+    )  # because fields starting with an underscore are treated as private attributes by default
+
     class Config:
-        allow_population_by_field_name = False  # populate via alias "_type" (default OK)
+        allow_population_by_field_name = (
+            False  # populate via alias "_type" (default OK)
+        )
 
 
 class TextFeature(BaseModel):
@@ -31,9 +37,10 @@ class TextFeature(BaseModel):
     type : Literal["Text"]
         Discriminator that identifies this feature as text.
     """
+
     id: Optional[Any] = None
     type: Literal["Text"] = Field(alias="_type")
-    
+
     class Config:
         allow_population_by_field_name = False
 
@@ -51,9 +58,10 @@ class BBoxFeature(BaseModel):
         (Actual numeric bbox values live in annotations; this is a *feature type*
         declaration.)
     """
+
     id: Optional[Any] = None
     type: Literal["BBoxFeature"] = Field(alias="_type")
-    
+
     class Config:
         allow_population_by_field_name = False
 
@@ -73,6 +81,7 @@ class ClassLabel(BaseModel):
     type : Literal["ClassLabel"]
         Discriminator for this feature type.
     """
+
     id: Optional[Any] = None
     num_classes: Optional[int] = None
     names: Optional[List[str]] = None
@@ -81,7 +90,7 @@ class ClassLabel(BaseModel):
     class Config:
         allow_population_by_field_name = False
 
-    
+
 class SequenceFeature(BaseModel):
     """
     Declarative descriptor for a sequence/array feature, typically used to model
@@ -102,6 +111,7 @@ class SequenceFeature(BaseModel):
         (e.g., per-object keypoints list). Uses a string forward reference to
         avoid circular typing.
     """
+
     id: Optional[Any] = None
     type: Literal["Sequence"] = Field(alias="_type")
     # for per-object attributes: allow nested fields (bbox/label/keypoints)
@@ -123,8 +133,10 @@ class Features(BaseModel):
         keypoints). The internal structure of `labels` determines which fields
         exist on each object (see `SequenceFeature`).
     """
+
     image: Optional[ImageFeature] = None
     labels: Optional[SequenceFeature] = None
+
     class Config:
         extra = "allow"
 
@@ -149,6 +161,7 @@ class SplitInfo(BaseModel):
     extra = "allow"
         Allows additional split metadata without failing validation.
     """
+
     name: str
     dataset_name: str
     num_examples: Optional[int] = None
@@ -186,6 +199,7 @@ class TaskTemplate(BaseModel):
         If `annotations` is provided, ensures it includes the minimal set of
         required fields for the declared `task`. (Extra fields are allowed.)
     """
+
     task: Literal["classification", "detection", "keypoints"]
     labels: List[str]
     num_keypoints: Optional[int] = None
@@ -199,7 +213,9 @@ class TaskTemplate(BaseModel):
         """
         if values.get("task") == "keypoints":
             if not isinstance(v, int) or v <= 0:
-                raise ValueError("For task='keypoints', num_keypoints must be a positive integer.")
+                raise ValueError(
+                    "For task='keypoints', num_keypoints must be a positive integer."
+                )
         return v
 
     @validator("annotations", always=True)
@@ -228,7 +244,7 @@ class TaskTemplate(BaseModel):
                 )
         return v
 
-    
+
 class DatasetInfo(BaseModel):
     """
     Container for dataset-level metadata, split summaries, and a single task template.
@@ -269,6 +285,7 @@ class DatasetInfo(BaseModel):
     of invariants so that downstream training/evaluation code can make simple
     assumptions about what exists without defensive checks everywhere.
     """
+
     task_templates: List[TaskTemplate]
     splits: Dict[str, SplitInfo]
     description: str = ""
@@ -316,10 +333,12 @@ class DatasetInfo(BaseModel):
         removed in production if verbose logs are undesirable.
         """
         splits = values.get("splits")
-        
+
         if not isinstance(splits, dict) or not splits:
-            raise ValueError("`splits` must be a non-empty mapping with keys: 'train', 'validation', 'test'.")
-    
+            raise ValueError(
+                "`splits` must be a non-empty mapping with keys: 'train', 'validation', 'test'."
+            )
+
         required = ("train", "validation", "test")
         missing = [k for k in required if k not in splits]
         if missing:
@@ -339,11 +358,12 @@ class DatasetInfos(BaseModel):
             ...
         }
     """
+
     __root__: Dict[str, DatasetInfo]
 
     class Config:
         extra = "forbid"
-        
+
     # make it dict-like
     def __getitem__(self, key: str) -> DatasetInfo:
         return self.__root__[key]
@@ -369,6 +389,7 @@ class DatasetInfos(BaseModel):
 
 if __name__ == "__main__":
     import json
+
     dataset_infos_path = "/path/to/dataset_infos.json"
     with open(dataset_infos_path) as f:
         data = json.load(f)

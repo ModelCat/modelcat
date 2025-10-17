@@ -8,6 +8,7 @@ Does not do:
     1. Check path of image files if they exist.
 """
 
+
 class Info(BaseModel):
     """
     COCO-style dataset 'info' metadata.
@@ -22,6 +23,7 @@ class Info(BaseModel):
 
     All fields are optional and arbitrary extra keys are allowed.
     """
+
     year: Optional[str] = None
     version: Optional[str] = None
     description: Optional[str] = None
@@ -43,13 +45,14 @@ class License(BaseModel):
         name: Human-readable license name (e.g., "CC-BY-4.0").
         url: Link to the full license text.
     """
+
     id: int
     name: Optional[str] = None
     url: Optional[str] = None
 
     class Config:
         extra = "allow"
-        
+
 
 class Category(BaseModel):
     """
@@ -64,12 +67,14 @@ class Category(BaseModel):
         skeleton: Optional list of [i, j] **1-based** pairs indicating keypoint connections
             (used by some tools for visualization). Indices must satisfy 1 <= i,j <= len(keypoints).
     """
-    
+
     id: int
     name: str
     supercategory: str
     keypoints: Optional[List[str]] = None  # keypoint labels
-    skeleton: Optional[List[List[int]]] = None   # list of [from, to] keypoint connections
+    skeleton: Optional[List[List[int]]] = (
+        None  # list of [from, to] keypoint connections
+    )
 
     class Config:
         extra = "allow"
@@ -109,7 +114,7 @@ class Category(BaseModel):
         """
         if v is None:
             return v
-        
+
         # structural checks
         if not isinstance(v, list):
             raise ValueError("skeleton must be a list of [i, j] pairs when provided.")
@@ -119,7 +124,7 @@ class Category(BaseModel):
             i, j = pair
             if not (isinstance(i, int) and isinstance(j, int)):
                 raise ValueError("skeleton indices must be integers.")
-            
+
         keypoints = values.get("keypoints")
         num_kp = len(keypoints) if keypoints else None
 
@@ -133,9 +138,9 @@ class Category(BaseModel):
                 raise ValueError(
                     f"skeleton indices out of range for {num_kp} keypoints; got [{i}, {j}] (must be <= {num_kp})."
                 )
-        
+
         return v
-        
+
 
 class Image(BaseModel):
     """
@@ -163,8 +168,8 @@ class Image(BaseModel):
 
     class Config:
         extra = "allow"
-        
-        
+
+
 class Annotation(BaseModel):
     """
     COCO-style annotation for an object instance (and optionally keypoints).
@@ -216,14 +221,16 @@ class Annotation(BaseModel):
         # replace None with [] for uniform downstream handling
         if v is None:
             return []
-        
+
         # empty bbox is acceptable
         if len(v) == 0:
             return v
 
         # if not empty, must be exactly 4 elements [x, y, width, height]
         if len(v) != 4:
-            raise ValueError(f"[ann id={ann_id}] bbox must have 4 elements [x, y, width, height] when provided.")
+            raise ValueError(
+                f"[ann id={ann_id}] bbox must have 4 elements [x, y, width, height] when provided."
+            )
 
         # validate type and non-negativity
         x, y, w, h = v
@@ -233,7 +240,7 @@ class Annotation(BaseModel):
             if val < 0:
                 raise ValueError(f"[ann id={ann_id}] bbox values must be non-negative.")
         return v
-    
+
     @validator("keypoints")
     def _check_keypoints(cls, v, values):
         ann_id = values.get("id", "<unknown>")  # for error messages
@@ -241,7 +248,9 @@ class Annotation(BaseModel):
         if v is None:
             return v
         if not isinstance(v, list) or (len(v) % 3) != 0:
-            raise ValueError(f"[ann id={ann_id}] keypoints must be a flat list of length 3*K: [x0,y0,v0,...].")
+            raise ValueError(
+                f"[ann id={ann_id}] keypoints must be a flat list of length 3*K: [x0,y0,v0,...]."
+            )
 
         for i in range(2, len(v), 3):
             vis = int(v[i])
@@ -250,12 +259,16 @@ class Annotation(BaseModel):
                     f"[ann id={ann_id}] keypoints visibility values must be 0,1,2; got {vis} or visibility is missing from keypoints data."
                     f" keypoints format must be [x0,y0,v0,...]."
                 )
-            x = float(v[i-2])
-            y = float(v[i-1])
+            x = float(v[i - 2])
+            y = float(v[i - 1])
             if vis == 0 and (x != 0 or y != 0):
-                raise ValueError(f"[ann id={ann_id}] When visibility v=0, keypoint coordinates must be (0,0).")
+                raise ValueError(
+                    f"[ann id={ann_id}] When visibility v=0, keypoint coordinates must be (0,0)."
+                )
             if vis > 0 and (x < 0 or y < 0):
-                raise ValueError(f"[ann id={ann_id}] Visible keypoints must have non-negative coordinates.")
+                raise ValueError(
+                    f"[ann id={ann_id}] Visible keypoints must have non-negative coordinates."
+                )
         return v
 
     @validator("segmentation", pre=True, always=True)
@@ -284,7 +297,9 @@ class Annotation(BaseModel):
         if v is None:
             return v
         if not isinstance(v, int) or v not in (0, 1):
-            raise ValueError(f"[ann id={ann_id}] iscrowd must be integer 0 or 1 when provided.")
+            raise ValueError(
+                f"[ann id={ann_id}] iscrowd must be integer 0 or 1 when provided."
+            )
         return v
 
 
@@ -331,6 +346,7 @@ class CocoDataset(BaseModel):
             * If 'num_keypoints' is provided, it must match the computed count of visible
               keypoints where visibility v > 0.
     """
+
     info: Optional[Info] = None
     licenses: Optional[List[License]] = None
     categories: List[Category]
@@ -339,7 +355,6 @@ class CocoDataset(BaseModel):
 
     class Config:
         extra = "allow"
-
 
     @root_validator
     def _uniqueness_and_refs(cls, values):
@@ -367,7 +382,7 @@ class CocoDataset(BaseModel):
         Raises:
             ValueError: If any integrity rule is violated.
         """
-        
+
         # extract sections, defaulting to empty lists if not available.
         licenses = values.get("licenses") or []
         categories = values.get("categories") or []
@@ -391,29 +406,35 @@ class CocoDataset(BaseModel):
         # ensure category names are unique (not just ids)
         cat_names = [c.name for c in categories]
         if len(set(cat_names)) != len(cat_names):
-            raise ValueError(f"Duplicate category name(s) found: {sorted([n for n in set(cat_names) if cat_names.count(n)>1])}")
+            raise ValueError(
+                f"Duplicate category name(s) found: {sorted([n for n in set(cat_names) if cat_names.count(n) > 1])}"
+            )
 
         # enforce contiguous ids starting at 1: 1..len(categories)
         expected_ids = list(range(1, len(categories) + 1))
         actual_ids = sorted([c.id for c in categories])
         if actual_ids != expected_ids:
-            raise ValueError(f"Category ids must be contiguous starting at 1; expected {expected_ids}, got {actual_ids}")
+            raise ValueError(
+                f"Category ids must be contiguous starting at 1; expected {expected_ids}, got {actual_ids}"
+            )
 
         ensure_unique(licenses, "license")
         ensure_unique(categories, "category")
         ensure_unique(images, "image")
         ensure_unique(annotations, "annotation")
 
-        # ID lookup sets for foreign-key checks 
-        license_ids = {l.id for l in licenses}
+        # ID lookup sets for foreign-key checks
+        license_ids = {lis.id for lis in licenses}
         category_ids = {c.id for c in categories}
         image_ids = {im.id for im in images}
 
         # validate image -> license references (if any)
         for im in images:
             if im.license is not None and im.license not in license_ids:
-                raise ValueError(f"Image id={im.id} references unknown license id={im.license}")
-        
+                raise ValueError(
+                    f"Image id={im.id} references unknown license id={im.license}"
+                )
+
         # ensure image file_name are non-empty strings and unique
         file_names = [im.file_name for im in images]
         if any((not isinstance(fn, str) or not fn.strip()) for fn in file_names):
@@ -432,24 +453,28 @@ class CocoDataset(BaseModel):
         for ann in annotations:
             # image_id / category_id must exist
             if ann.image_id not in image_ids:
-                raise ValueError(f"Annotation id={ann.id} references unknown image_id={ann.image_id}")
+                raise ValueError(
+                    f"Annotation id={ann.id} references unknown image_id={ann.image_id}"
+                )
             if ann.category_id not in category_ids:
-                raise ValueError(f"Annotation id={ann.id} references unknown category_id={ann.category_id}")
+                raise ValueError(
+                    f"Annotation id={ann.id} references unknown category_id={ann.category_id}"
+                )
 
             # for this annotation, look up how many keypoints are expected given its category
             expected_k = cat_kp_len.get(ann.category_id)
-    
+
             if expected_k:  # keypoints are required for this category
                 if ann.keypoints is None:  # keypoints must be present
                     raise ValueError(
                         f"Annotation id={ann.id} (category_id={ann.category_id}) must include 'keypoints'."
                     )
-                    
+
                 # annotation must include keypoints with length exactly 3*K.
                 triplets = len(ann.keypoints) // 3
                 if triplets != expected_k:
                     raise ValueError(
-                        f"Annotation id={ann.id}: keypoints length must be {expected_k*3} "
+                        f"Annotation id={ann.id}: keypoints length must be {expected_k * 3} "
                         f"(got {len(ann.keypoints)})."
                     )
 
@@ -457,7 +482,11 @@ class CocoDataset(BaseModel):
                 # if num_keypoints is given, it must equal visible count (v > 0).
                 if ann.num_keypoints is not None:
                     # visibility v is every 3rd element starting at index 2: [x, y, v].
-                    visible = sum(1 for i in range(2, len(ann.keypoints), 3) if int(ann.keypoints[i]) > 0)
+                    visible = sum(
+                        1
+                        for i in range(2, len(ann.keypoints), 3)
+                        if int(ann.keypoints[i]) > 0
+                    )
                     if ann.num_keypoints != visible:
                         raise ValueError(
                             f"Annotation id={ann.id}: num_keypoints={ann.num_keypoints} "
@@ -465,10 +494,11 @@ class CocoDataset(BaseModel):
                         )
 
         return values
-    
+
 
 if __name__ == "__main__":
     import json
+
     annot_path = "/path/to/annotations/coco_train.json"
     with open(annot_path) as f:
         data = json.load(f)

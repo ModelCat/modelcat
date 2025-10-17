@@ -44,9 +44,16 @@ def valid_kp_dataset(K=4):
         "info": {"year": "2025"},
         "licenses": [{"id": 1}],
         "categories": [
-            {"id": 1, "name": "person", "supercategory": "person", "keypoints": [f"k{i}" for i in range(K)]}
+            {
+                "id": 1,
+                "name": "person",
+                "supercategory": "person",
+                "keypoints": [f"k{i}" for i in range(K)],
+            }
         ],
-        "images": [{"id": 1, "file_name": "img.jpg", "license": 1, "width": 100, "height": 100}],
+        "images": [
+            {"id": 1, "file_name": "img.jpg", "license": 1, "width": 100, "height": 100}
+        ],
         "annotations": [
             {
                 "id": 1,
@@ -194,7 +201,9 @@ class TestCocoSchemaFailures(unittest.TestCase):
         data["annotations"][0]["keypoints"][0:3] = [-1, 0, 2]
         with self.assertRaises(ValidationError) as ctx:
             CocoDataset.parse_obj(data)
-        self.assertIn("Visible keypoints must have non-negative coordinates", str(ctx.exception))
+        self.assertIn(
+            "Visible keypoints must have non-negative coordinates", str(ctx.exception)
+        )
 
     def test_iscrowd_invalid(self):
         data = valid_base_dataset()
@@ -239,7 +248,10 @@ class TestCocoSchemaFailures(unittest.TestCase):
     # root validator failures: category name uniqueness
     def test_duplicate_category_names(self):
         data = valid_base_dataset()
-        data["categories"] = [{"id": 1, "name": "cat", "supercategory": "animal"}, {"id": 2, "name": "cat", "supercategory": "animal"}]
+        data["categories"] = [
+            {"id": 1, "name": "cat", "supercategory": "animal"},
+            {"id": 2, "name": "cat", "supercategory": "animal"},
+        ]
         with self.assertRaises(ValidationError) as ctx:
             CocoDataset.parse_obj(data)
         self.assertIn("Duplicate category name", str(ctx.exception))
@@ -247,10 +259,15 @@ class TestCocoSchemaFailures(unittest.TestCase):
     # root validator failures: category ids must be contiguous starting at 1
     def test_category_ids_not_contiguous_from_1(self):
         data = valid_base_dataset()
-        data["categories"] = [{"id": 1, "name": "a", "supercategory": "animal"}, {"id": 3, "name": "b", "supercategory": "animal"}]
+        data["categories"] = [
+            {"id": 1, "name": "a", "supercategory": "animal"},
+            {"id": 3, "name": "b", "supercategory": "animal"},
+        ]
         with self.assertRaises(ValidationError) as ctx:
             CocoDataset.parse_obj(data)
-        self.assertIn("Category ids must be contiguous starting at 1", str(ctx.exception))
+        self.assertIn(
+            "Category ids must be contiguous starting at 1", str(ctx.exception)
+        )
 
     # root validator failures: invalid foreign keys
     def test_annotation_unknown_image_id(self):
@@ -314,8 +331,16 @@ class TestCocoDatasetSuccess(unittest.TestCase):
         cat_ids = {c.id for c in coco.categories}
         img_ids = {im.id for im in coco.images}
         for ann in coco.annotations:
-            self.assertIn(ann.category_id, cat_ids, f"unknown category_id {ann.category_id} in ann {ann.id}")
-            self.assertIn(ann.image_id, img_ids, f"unknown image_id {ann.image_id} in ann {ann.id}")
+            self.assertIn(
+                ann.category_id,
+                cat_ids,
+                f"unknown category_id {ann.category_id} in ann {ann.id}",
+            )
+            self.assertIn(
+                ann.image_id,
+                img_ids,
+                f"unknown image_id {ann.image_id} in ann {ann.id}",
+            )
 
         # segmentation should always be present (validator defaults to [[]])
         for ann in coco.annotations:
@@ -340,17 +365,31 @@ class TestCocoDatasetSuccess(unittest.TestCase):
 
     def _assert_keypoints_rules(self, coco: CocoDataset):
         # map category_id -> expected K (or None if no keypoints)
-        cat_to_k = {c.id: (len(c.keypoints) if c.keypoints else None) for c in coco.categories}
+        cat_to_k = {
+            c.id: (len(c.keypoints) if c.keypoints else None) for c in coco.categories
+        }
         for ann in coco.annotations:
             K = cat_to_k.get(ann.category_id)
             if K:
-                self.assertIsInstance(ann.keypoints, list, f"ann {ann.id} must include keypoints")
-                self.assertEqual(len(ann.keypoints), 3 * K, f"ann {ann.id} keypoints length must be 3*K")
+                self.assertIsInstance(
+                    ann.keypoints, list, f"ann {ann.id} must include keypoints"
+                )
+                self.assertEqual(
+                    len(ann.keypoints),
+                    3 * K,
+                    f"ann {ann.id} keypoints length must be 3*K",
+                )
                 # if num_keypoints present, it must match count of v>0
                 if ann.num_keypoints is not None:
-                    visible = sum(1 for i in range(2, len(ann.keypoints), 3) if int(ann.keypoints[i]) > 0)
+                    visible = sum(
+                        1
+                        for i in range(2, len(ann.keypoints), 3)
+                        if int(ann.keypoints[i]) > 0
+                    )
                     self.assertEqual(
-                        ann.num_keypoints, visible, f"ann {ann.id} num_keypoints mismatch (got {ann.num_keypoints}, vis {visible})"
+                        ann.num_keypoints,
+                        visible,
+                        f"ann {ann.id} num_keypoints mismatch (got {ann.num_keypoints}, vis {visible})",
                     )
 
     # classification sample
