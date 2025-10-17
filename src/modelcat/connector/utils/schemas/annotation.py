@@ -152,7 +152,7 @@ class Image(BaseModel):
         flickr_url: Optional Flickr URL (if applicable).
     """
 
-    id: int
+    id: Union[int, float, str]
     file_name: str
     height: Optional[int] = None
     width: Optional[int] = None
@@ -183,8 +183,8 @@ class Annotation(BaseModel):
         num_keypoints: Optional count of visible keypoints (v > 0).
     """
 
-    id: Union[int, str]
-    image_id: Union[int, str]
+    id: Union[int, float, str]
+    image_id: Union[int, float, str]
     category_id: int
     bbox: Optional[List[Union[int, float]]] = Field(default_factory=list)
     segmentation: Optional[List[List[Union[int, float]]]] = None
