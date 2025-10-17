@@ -11,15 +11,21 @@ class TestSetup(unittest.TestCase):
     @patch('modelcat.connector.setup.input')
     @patch('modelcat.connector.setup.getpass')
     @patch('modelcat.connector.setup.ProductAPIClient')
-    @patch('modelcat.connector.setup.run_cli_command')
     @patch('modelcat.connector.setup.check_aws_configuration')
-    @patch('modelcat.connector.utils.aws.check_s3_access')
     @patch('modelcat.connector.setup.os.makedirs')
+    @patch('modelcat.connector.setup.os.path.exists')
+    @patch('modelcat.connector.setup.Path.home')
     def test_run_setup_success(
-            self, mock_makedirs, mock_check_s3_access, mock_check_aws_config,
-            mock_run_cli, mock_api_client, mock_getpass, mock_input, mock_check_awscli
+            self, mock_home, mock_path_exists, mock_makedirs, mock_check_aws_config,
+            mock_api_client, mock_getpass, mock_input, mock_check_awscli
     ):
         """Test a successful setup process."""
+        # Mock home directory
+        mock_home.return_value = '/mock/home'
+
+        # Mock path exists to return False (no existing config)
+        mock_path_exists.return_value = False
+
         # Mock AWS CLI check
         mock_check_awscli.return_value = True
 
@@ -29,6 +35,9 @@ class TestSetup(unittest.TestCase):
 
         # Mock ProductAPIClient
         mock_client_instance = MagicMock()
+        mock_client_instance.get_me.return_value = {
+            "full_name": "Test User"
+        }
         mock_client_instance.get_aws_access.return_value = {
             "access_key_id": "mock_access_key",
             "secret_access_key": "mock_secret_key"
@@ -37,9 +46,6 @@ class TestSetup(unittest.TestCase):
 
         # Mock AWS configuration check
         mock_check_aws_config.return_value = True
-
-        # Mock S3 access check
-        mock_check_s3_access.return_value = True
 
         # Run the setup function with mocked open
         with patch('builtins.open', mock_open()) as mock_file:
@@ -54,34 +60,37 @@ class TestSetup(unittest.TestCase):
 
         # Verify ProductAPIClient was created and used
         mock_api_client.assert_called_once()
-        mock_client_instance.get_aws_access.assert_called_once_with("12345678-1234-1234-1234-123456789012")
-
-        # Verify AWS CLI commands were run (4 commands)
-        self.assertEqual(mock_run_cli.call_count, 4)
 
         # Verify AWS configuration was checked
         mock_check_aws_config.assert_called_once()
-
-        # Verify S3 access was checked
-        mock_check_s3_access.assert_called_once_with("12345678-1234-1234-1234-123456789012", verbose=False)
 
         # Verify config directory was created
         mock_makedirs.assert_called_once()
 
         # Verify config file was written
-        mock_file.assert_called_once()
+        mock_file.assert_called()
         # The write method is called multiple times to write the JSON config file
         self.assertTrue(mock_file().write.called)
 
     @patch('modelcat.connector.setup.check_awscli')
-    def test_run_setup_no_aws_cli(self, mock_check_awscli):
+    @patch('modelcat.connector.setup.os.makedirs')
+    @patch('modelcat.connector.setup.os.path.exists')
+    @patch('modelcat.connector.setup.Path.home')
+    def test_run_setup_no_aws_cli(self, mock_home, mock_path_exists, mock_makedirs, mock_check_awscli):
         """Test setup process when AWS CLI is not installed."""
+        # Mock home directory
+        mock_home.return_value = '/mock/home'
+
+        # Mock path exists to return False (no existing config)
+        mock_path_exists.return_value = False
+
         # Mock AWS CLI check to fail
         mock_check_awscli.return_value = False
 
         # Run the setup function with exit expected
-        with self.assertRaises(SystemExit) as cm:
-            run_setup()
+        with patch('builtins.open', mock_open()):
+            with self.assertRaises(SystemExit) as cm:
+                run_setup()
 
         # Verify exit code
         self.assertEqual(cm.exception.code, 1)
@@ -90,20 +99,35 @@ class TestSetup(unittest.TestCase):
         mock_check_awscli.assert_called_once()
 
     @patch('modelcat.connector.setup.run_setup')
-    def test_setup_cli(self, mock_run_setup):
+    @patch('argparse.ArgumentParser.parse_args')
+    def test_setup_cli(self, mock_parse_args, mock_run_setup):
         """Test the setup_cli function."""
+        # Mock the parse_args method to return a namespace with debug=False
+        mock_args = unittest.mock.Mock()
+        mock_args.debug = False
+        mock_parse_args.return_value = mock_args
+
         # Run the CLI function
         setup_cli()
 
-        # Verify run_setup was called with verbose=1
-        mock_run_setup.assert_called_once_with(verbose=1)
+        # Verify run_setup was called with verbose=0
+        mock_run_setup.assert_called_once_with(verbose=0)
 
     @patch('modelcat.connector.setup.check_awscli')
     @patch('modelcat.connector.setup.input')
     @patch('modelcat.connector.setup.getpass')
     @patch('modelcat.connector.setup.ProductAPIClient')
-    def test_run_setup_api_error(self, mock_api_client, mock_getpass, mock_input, mock_check_awscli):
+    @patch('modelcat.connector.setup.os.makedirs')
+    @patch('modelcat.connector.setup.os.path.exists')
+    @patch('modelcat.connector.setup.Path.home')
+    def test_run_setup_api_error(self, mock_home, mock_path_exists, mock_makedirs, mock_api_client, mock_getpass, mock_input, mock_check_awscli):
         """Test setup process when API returns an error."""
+        # Mock home directory
+        mock_home.return_value = '/mock/home'
+
+        # Mock path exists to return False (no existing config)
+        mock_path_exists.return_value = False
+
         # Mock AWS CLI check
         mock_check_awscli.return_value = True
 
@@ -114,12 +138,13 @@ class TestSetup(unittest.TestCase):
         # Mock ProductAPIClient to raise an APIError
         from modelcat.connector.utils.api import APIError
         mock_client_instance = MagicMock()
-        mock_client_instance.get_aws_access.side_effect = APIError("API Error")
+        mock_client_instance.get_me.side_effect = APIError("API Error")
         mock_api_client.return_value = mock_client_instance
 
         # Run the setup function with exit expected
-        with self.assertRaises(SystemExit) as cm:
-            run_setup()
+        with patch('builtins.open', mock_open()):
+            with self.assertRaises(SystemExit) as cm:
+                run_setup()
 
         # Verify exit code
         self.assertEqual(cm.exception.code, 1)

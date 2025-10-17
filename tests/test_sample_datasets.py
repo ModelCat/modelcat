@@ -5,6 +5,7 @@ import shutil
 import unittest
 import modelcat.connector as connector
 from modelcat.connector.validate import DatasetValidator
+from modelcat.connector.utils.common import UserChoice
 import os.path as osp
 import tempfile
 import logging as log
@@ -121,7 +122,7 @@ class TestSimple(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             shutil.copytree(ds_path, tmp, dirs_exist_ok=True)
             dsv_no_autofix = DatasetValidator(tmp, tmp, auto_fix=False)
-            dsv_autofix = DatasetValidator(tmp, tmp, auto_fix=True, auto_fix_prompt=False)
+            dsv_autofix = DatasetValidator(tmp, tmp, auto_fix=True, auto_fix_2=UserChoice.YES)
             while True:
                 msgs, restart = dsv_no_autofix.validate_dataset()
                 if not restart:
