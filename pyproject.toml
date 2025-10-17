@@ -75,7 +75,7 @@ classifiers = [  # Optional
   #   3 - Alpha
   #   4 - Beta
   #   5 - Production/Stable
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
 
   # Indicate who your project is intended for
   "Intended Audience :: Developers",
@@ -136,9 +136,9 @@ test = ["coverage"]
 # maintainers, and where to support the project financially. The key is
 # what's used to render the link text on PyPI.
 [project.urls]  # Optional
-"Homepage" = "https://github.com/Eta-Compute/modelcat"
-"Bug Reports" = "https://github.com/Eta-Compute/modelcat/issues"
-"Source" = "https://github.com/Eta-Compute/modelcat"
+"Homepage" = "https://github.com/ModelCat/modelcat"
+"Bug Reports" = "https://github.com/ModelCat/modelcat/issues"
+"Source" = "https://github.com/ModelCat/modelcat"
 
 # The following would provide a command line executable called `sample`
 # which executes the function `main` from this package when invoked.

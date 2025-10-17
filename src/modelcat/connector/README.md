@@ -21,11 +21,11 @@ In order to prepare your dataset, please follow our guide: [Dataset preparation 
 
 ### ModelCatConnector Setup
 
-This one-time procedure will configure ModelCatConnector's access to the ModelCat platform. You will need to provide your `ModelCat Group ID` and `ModelCat OAuth Token`.
+This one-time procedure will configure ModelCatConnector's access to the ModelCat platform. You will need to provide your `ModelCat Group ID` and `ModelCat OAuth Token`. You can obtain this information on the [ModelCat Datasets Upload](https://app.modelcat.ai/datasets#upload) page.
 
 > **Note:** The OAuth token is used to authenticate with the ModelCat platform. You can obtain your OAuth token from the ModelCat platform. The token format should be an integer followed by an underscore, followed by a 40 character hexadecimal string (e.g., `1_1234567890abcdef1234567890abcdef12345678`).
 >
-> When you provide your OAuth token, ModelCatConnector will use it to authenticate with the ModelCat API and automatically retrieve temporary AWS credentials. These credentials are then configured in your AWS CLI profile for seamless access to ModelCat resources.
+> When you provide your OAuth token, ModelCatConnector will use it to authenticate with the ModelCat API and automatically retrieve temporary platform credentials. These credentials will be cached locally for seamless access to ModelCat resources.
 
 ```
 (modelcat_env) user@ubuntu: modelcat_setup
@@ -37,7 +37,7 @@ AWS CLI installation verified.
 ModelCat Group ID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXX
 ModelCat OAuth Token: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 --------------------------------------------------
-Verifying AWS access...
+Verifying platform access...
 Verification successful.
 --------------------------------------------------
 Configuration complete!
@@ -81,7 +81,7 @@ This utility will upload your dataset to ModelCat.
                         ModelCatConnector (v0.0.1) - dataset validation utility
 
 ----------------------------------------------------------------------------------------------------
-Veryfying dataset signature...
+Verifying dataset signature...
 Done!
 S3 access verified
 Found 3693 files in the dataset: 505.73 MB

@@ -3,8 +3,7 @@ from retry import retry
 from . import run_cli_command, CLICommandError
 import logging as log
 
-from modelcat.connector.utils.consts import DEFAULT_AWS_PROFILE
-from modelcat.consts import PRODUCT_NAME, PRODUCT_S3_BUCKET
+from modelcat.consts import PRODUCT_S3_BUCKET
 
 
 def check_awscli() -> bool:
@@ -28,20 +27,10 @@ def check_aws_configuration(verbose: int = 0) -> bool:
         )
         return False
 
-    cmd = ["aws", "configure", "list", "--profile", DEFAULT_AWS_PROFILE]
-    try:
-        run_cli_command(cmd, verbose=(verbose == 2))
-    except CLICommandError as e:
-        log.info(str(e).strip())
-        print(
-            f"Error locating user credentials. Please run `modelcat_setup` to properly configure your {PRODUCT_NAME} access"
-        )
-        return False
-
     return True
 
 
-@retry(exceptions=Exception, delay=20, tries=6, backoff=1)  # trying for 6 * 20 = 120 seconds
+@retry(exceptions=Exception, delay=20, tries=6, backoff=1, logger=None)  # trying for 6 * 20 = 120 seconds
 def check_s3_access(group_id: str, verbose: bool = False) -> None:
 
     cmd = [
@@ -49,8 +38,6 @@ def check_s3_access(group_id: str, verbose: bool = False) -> None:
         "s3",
         "ls",
         f"s3://{PRODUCT_S3_BUCKET}/account/{group_id}/",
-        "--profile",
-        DEFAULT_AWS_PROFILE,
     ]
     outputs = []
     try:
@@ -60,6 +47,5 @@ def check_s3_access(group_id: str, verbose: bool = False) -> None:
             line_parser=lambda line: outputs.append(line.strip()),
         )
         print("S3 access verified")
-    except CLICommandError as e:
-        print(f"Cannot obtain AWS access: {e}")
+    except CLICommandError:
         raise
