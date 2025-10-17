@@ -67,7 +67,7 @@ class Category(BaseModel):
     
     id: int
     name: str
-    supercategory: Optional[str] = None
+    supercategory: str
     keypoints: Optional[List[str]] = None  # keypoint labels
     skeleton: Optional[List[List[int]]] = None   # list of [from, to] keypoint connections
 
@@ -183,8 +183,8 @@ class Annotation(BaseModel):
         num_keypoints: Optional count of visible keypoints (v > 0).
     """
 
-    id: int
-    image_id: int
+    id: Union[int, str]
+    image_id: Union[int, str]
     category_id: int
     bbox: Optional[List[Union[int, float]]] = Field(default_factory=list)
     segmentation: Optional[List[List[Union[int, float]]]] = None

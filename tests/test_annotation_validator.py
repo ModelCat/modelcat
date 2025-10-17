@@ -18,7 +18,7 @@ def valid_base_dataset():
     return {
         "info": {"year": "2025", "version": "1.0"},
         "licenses": [{"id": 1, "name": "MIT"}],
-        "categories": [{"id": 1, "name": "cat"}],
+        "categories": [{"id": 1, "name": "cat", "supercategory": "animal"}],
         "images": [{"id": 1, "file_name": "img_0001.jpg", "license": 1}],
         "annotations": [
             {
@@ -44,7 +44,7 @@ def valid_kp_dataset(K=4):
         "info": {"year": "2025"},
         "licenses": [{"id": 1}],
         "categories": [
-            {"id": 1, "name": "person", "keypoints": [f"k{i}" for i in range(K)]}
+            {"id": 1, "name": "person", "supercategory": "person", "keypoints": [f"k{i}" for i in range(K)]}
         ],
         "images": [{"id": 1, "file_name": "img.jpg", "license": 1, "width": 100, "height": 100}],
         "annotations": [
@@ -213,7 +213,7 @@ class TestCocoSchemaFailures(unittest.TestCase):
 
     def test_duplicate_category_ids(self):
         data = valid_base_dataset()
-        data["categories"].append({"id": 1, "name": "dog"})
+        data["categories"].append({"id": 1, "name": "dog", "supercategory": "animal"})
         with self.assertRaises(ValidationError) as ctx:
             CocoDataset.parse_obj(data)
         self.assertIn("Category ids must be contiguous", str(ctx.exception))
@@ -239,7 +239,7 @@ class TestCocoSchemaFailures(unittest.TestCase):
     # root validator failures: category name uniqueness
     def test_duplicate_category_names(self):
         data = valid_base_dataset()
-        data["categories"] = [{"id": 1, "name": "cat"}, {"id": 2, "name": "cat"}]
+        data["categories"] = [{"id": 1, "name": "cat", "supercategory": "animal"}, {"id": 2, "name": "cat", "supercategory": "animal"}]
         with self.assertRaises(ValidationError) as ctx:
             CocoDataset.parse_obj(data)
         self.assertIn("Duplicate category name", str(ctx.exception))
@@ -247,7 +247,7 @@ class TestCocoSchemaFailures(unittest.TestCase):
     # root validator failures: category ids must be contiguous starting at 1
     def test_category_ids_not_contiguous_from_1(self):
         data = valid_base_dataset()
-        data["categories"] = [{"id": 1, "name": "a"}, {"id": 3, "name": "b"}]
+        data["categories"] = [{"id": 1, "name": "a", "supercategory": "animal"}, {"id": 3, "name": "b", "supercategory": "animal"}]
         with self.assertRaises(ValidationError) as ctx:
             CocoDataset.parse_obj(data)
         self.assertIn("Category ids must be contiguous starting at 1", str(ctx.exception))
