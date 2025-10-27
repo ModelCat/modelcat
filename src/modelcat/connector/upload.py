@@ -14,10 +14,23 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
-from modelcat.consts import PACKAGE_NAME as ROOT_PACKAGE_NAME, PRODUCT_NAME, PRODUCT_S3_BUCKET, PRODUCT_URL
+from modelcat.consts import (
+    PACKAGE_NAME as ROOT_PACKAGE_NAME,
+    PRODUCT_NAME,
+    PRODUCT_S3_BUCKET,
+    PRODUCT_URL,
+)
 from modelcat.connector.utils.api import APIConfig, ProductAPIClient, APIError
-from modelcat.connector.utils.common import format_local_datetime, UserChoice, resolve_version
-from modelcat.connector.utils.consts import PACKAGE_NAME, DEFAULT_AWS_FORMAT, DEFAULT_AWS_REGION
+from modelcat.connector.utils.common import (
+    format_local_datetime,
+    UserChoice,
+    resolve_version,
+)
+from modelcat.connector.utils.consts import (
+    PACKAGE_NAME,
+    DEFAULT_AWS_FORMAT,
+    DEFAULT_AWS_REGION,
+)
 
 from modelcat.connector.utils.aws import check_aws_configuration, check_s3_access
 
@@ -44,7 +57,7 @@ class DatasetUploader:
 
         if not self.is_valid_uuid(self.group_id):
             print(
-                f'Provided `{PRODUCT_NAME} Group ID` ({self.group_id}) does not have a correct format. '
+                f"Provided `{PRODUCT_NAME} Group ID` ({self.group_id}) does not have a correct format. "
                 'It should be a valid UUID e.g. "461b1b66-8787-11ed-aff3-07f20767316e"'
             )
             exit(1)
@@ -108,7 +121,9 @@ class DatasetUploader:
 
         return True
 
-    def obtain_s3_access(self, api_client: ProductAPIClient, group_id: str, verbose: bool = False):
+    def obtain_s3_access(
+        self, api_client: ProductAPIClient, group_id: str, verbose: bool = False
+    ):
         # get the AWS access key credentials
         print("Obtaining platform access key credentials...")
         try:
@@ -160,7 +175,9 @@ class DatasetUploader:
 
         datasets = api_client.list_datasets()
 
-        datasets_same_name = [ds for ds in datasets if ds.get("name") == self.dataset_name]
+        datasets_same_name = [
+            ds for ds in datasets if ds.get("name") == self.dataset_name
+        ]
         len_same_name = len(datasets_same_name)
         old_ds_uuid = None
         if len_same_name > 0:
@@ -194,8 +211,10 @@ class DatasetUploader:
                 if choice == "o" and len_same_name == 1:
                     choice = "1"
                 else:
-                    print("Multiple datasets with the same name found. Aborting upload.\n"
-                          "Try rerunning in interactive mode to select which dataset to overwrite.")
+                    print(
+                        "Multiple datasets with the same name found. Aborting upload.\n"
+                        "Try rerunning in interactive mode to select which dataset to overwrite."
+                    )
                     exit(1)
                 choice_idx = int(choice) - 1
                 if choice_idx < 0 or choice_idx >= len_same_name:
@@ -223,7 +242,7 @@ class DatasetUploader:
             self.dataset_root,
             self.s3_uri,
             "--exclude",
-            "./.*/**"
+            "./.*/**",
         ]
 
         print("")
@@ -286,8 +305,10 @@ class DatasetUploader:
             )
         except APIError as ae:
             print(f"Dataset registration/upload failed. {PRODUCT_NAME} API error: {ae}")
-            print(f"Please try generating a new OAuth token at {PRODUCT_URL}/datasets#upload "
-                  f"or contact customer support at support@modelcat.ai")
+            print(
+                f"Please try generating a new OAuth token at {PRODUCT_URL}/datasets#upload "
+                f"or contact customer support at support@modelcat.ai"
+            )
             exit(1)
 
     def restore_files(self):
@@ -365,7 +386,7 @@ class DatasetUploader:
 
     @staticmethod
     def normalize_ds_name(name: str):
-        return re.sub("[^a-zA-Z0-9_\.-]", "", name) # noqa W605
+        return re.sub("[^a-zA-Z0-9_\.-]", "", name)  # noqa W605
 
     @staticmethod
     def get_sha(text):
@@ -420,8 +441,8 @@ def upload_cli():
     args = parser.parse_args()
 
     print(
-        f'{PACKAGE_NAME} (v{resolve_version(ROOT_PACKAGE_NAME)}) '
-        f'- dataset validation utility'.center(100)
+        f"{PACKAGE_NAME} (v{resolve_version(ROOT_PACKAGE_NAME)}) "
+        f"- dataset validation utility".center(100)
     )
     print("\n" + "-" * 100)
 

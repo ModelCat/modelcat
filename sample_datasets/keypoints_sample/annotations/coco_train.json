@@ -139,7 +139,7 @@
     ],
     "annotations": [
         {
-            "num_keypoints": 17,
+            "num_keypoints": 8,
             "area": 64755.921,
             "iscrowd": 0,
             "keypoints": [
@@ -179,7 +179,7 @@
             "id": 777
         },
         {
-            "num_keypoints": 17,
+            "num_keypoints": 8,
             "area": 74220.73,
             "iscrowd": 0,
             "keypoints": [
@@ -219,7 +219,7 @@
             "id": 508
         },
         {
-            "num_keypoints": 16,
+            "num_keypoints": 8,
             "area": 8004.16745,
             "iscrowd": 0,
             "keypoints": [
@@ -259,7 +259,7 @@
             "id": 896
         },
         {
-            "num_keypoints": 16,
+            "num_keypoints": 8,
             "area": 41026.74875,
             "iscrowd": 0,
             "keypoints": [
@@ -299,7 +299,7 @@
             "id": 923
         },
         {
-            "num_keypoints": 14,
+            "num_keypoints": 8,
             "area": 89758.33155,
             "iscrowd": 0,
             "keypoints": [
@@ -339,7 +339,7 @@
             "id": 34
         },
         {
-            "num_keypoints": 16,
+            "num_keypoints": 8,
             "area": 9644.57805,
             "iscrowd": 0,
             "keypoints": [
@@ -379,7 +379,7 @@
             "id": 484
         },
         {
-            "num_keypoints": 15,
+            "num_keypoints": 8,
             "area": 7954.1565,
             "iscrowd": 0,
             "keypoints": [
@@ -419,7 +419,7 @@
             "id": 86
         },
         {
-            "num_keypoints": 15,
+            "num_keypoints": 8,
             "area": 10254.5128,
             "iscrowd": 0,
             "keypoints": [
@@ -459,7 +459,7 @@
             "id": 751
         },
         {
-            "num_keypoints": 16,
+            "num_keypoints": 8,
             "area": 24061.24995,
             "iscrowd": 0,
             "keypoints": [
@@ -499,7 +499,7 @@
             "id": 355
         },
         {
-            "num_keypoints": 17,
+            "num_keypoints": 8,
             "area": 20930.9037,
             "iscrowd": 0,
             "keypoints": [

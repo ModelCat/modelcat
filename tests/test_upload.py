@@ -21,15 +21,11 @@ class TestDatasetUploader(unittest.TestCase):
                 "license": "",
                 "features": {},
                 "splits": {
-                    "train": {
-                        "name": "train",
-                        "num_bytes": 1000,
-                        "num_examples": 10
-                    }
+                    "train": {"name": "train", "num_bytes": 1000, "num_examples": 10}
                 },
                 "supervised_keys": None,
                 "builder_name": "test_builder",
-                "dataset_size": 5000
+                "dataset_size": 5000,
             }
         }
 
@@ -38,30 +34,42 @@ class TestDatasetUploader(unittest.TestCase):
         self.group_id = "12345678-1234-1234-1234-123456789012"
         self.oauth_token = "1_1234567890abcdef1234567890abcdef12345678"
 
-    @patch('modelcat.connector.upload.check_aws_configuration')
-    @patch('modelcat.connector.upload.osp.exists')
-    @patch('builtins.open', new_callable=mock_open, read_data=json.dumps({"test_dataset": {
-        "description": "Test dataset",
-        "citation": "",
-        "homepage": "",
-        "license": "",
-        "features": {},
-        "splits": {
-            "train": {
-                "name": "train",
-                "num_bytes": 1000,
-                "num_examples": 10
+    @patch("modelcat.connector.upload.check_aws_configuration")
+    @patch("modelcat.connector.upload.osp.exists")
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=json.dumps(
+            {
+                "test_dataset": {
+                    "description": "Test dataset",
+                    "citation": "",
+                    "homepage": "",
+                    "license": "",
+                    "features": {},
+                    "splits": {
+                        "train": {
+                            "name": "train",
+                            "num_bytes": 1000,
+                            "num_examples": 10,
+                        }
+                    },
+                    "supervised_keys": None,
+                    "builder_name": "test_builder",
+                    "dataset_size": 5000,
+                }
             }
-        },
-        "supervised_keys": None,
-        "builder_name": "test_builder",
-        "dataset_size": 5000
-    }}))
-    @patch('modelcat.connector.upload.check_s3_access')
-    @patch('modelcat.connector.upload.DatasetUploader.dataset_check')
+        ),
+    )
+    @patch("modelcat.connector.upload.check_s3_access")
+    @patch("modelcat.connector.upload.DatasetUploader.dataset_check")
     def test_init_success(
-            self, mock_dataset_check, mock_check_s3_access,
-            mock_open, mock_exists, mock_check_aws_config
+        self,
+        mock_dataset_check,
+        mock_check_s3_access,
+        mock_open,
+        mock_exists,
+        mock_check_aws_config,
     ):
         """Test successful initialization of DatasetUploader."""
         # Mock dependencies
@@ -74,7 +82,7 @@ class TestDatasetUploader(unittest.TestCase):
             dataset_root_dir=self.dataset_root,
             working_dir=self.dataset_root,
             group_id=self.group_id,
-            oauth_token=self.oauth_token
+            oauth_token=self.oauth_token,
         )
 
         # Verify initialization
@@ -82,15 +90,18 @@ class TestDatasetUploader(unittest.TestCase):
         self.assertEqual(uploader.group_id, self.group_id)
         self.assertEqual(uploader.oauth_token, self.oauth_token)
         self.assertEqual(uploader.dataset_name, "test_dataset")
-        self.assertIn(f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/", uploader.s3_uri)
+        self.assertIn(
+            f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/",
+            uploader.s3_uri,
+        )
 
         # Verify dependencies were checked
         mock_check_aws_config.assert_called_once()
         mock_exists.assert_called_once_with(self.dataset_root)
         mock_dataset_check.assert_called_once()
 
-    @patch('modelcat.connector.upload.check_aws_configuration')
-    @patch('modelcat.connector.upload.osp.exists')
+    @patch("modelcat.connector.upload.check_aws_configuration")
+    @patch("modelcat.connector.upload.osp.exists")
     def test_init_invalid_uuid(self, mock_exists, mock_check_aws_config):
         """Test initialization with invalid UUID."""
         # Mock dependencies
@@ -103,14 +114,14 @@ class TestDatasetUploader(unittest.TestCase):
                 dataset_root_dir=self.dataset_root,
                 working_dir=self.dataset_root,
                 group_id="invalid-uuid",
-                oauth_token=self.oauth_token
+                oauth_token=self.oauth_token,
             )
 
         # Verify exit code
         self.assertEqual(cm.exception.code, 1)
 
-    @patch('modelcat.connector.upload.check_aws_configuration')
-    @patch('modelcat.connector.upload.osp.exists')
+    @patch("modelcat.connector.upload.check_aws_configuration")
+    @patch("modelcat.connector.upload.osp.exists")
     def test_init_path_not_exists(self, mock_exists, mock_check_aws_config):
         """Test initialization with non-existent path."""
         # Mock dependencies
@@ -123,40 +134,50 @@ class TestDatasetUploader(unittest.TestCase):
                 dataset_root_dir=self.dataset_root,
                 working_dir=self.dataset_root,
                 group_id=self.group_id,
-                oauth_token=self.oauth_token
+                oauth_token=self.oauth_token,
             )
 
         # Verify exit code
         self.assertEqual(cm.exception.code, 1)
 
-    @patch('modelcat.connector.upload.osp.exists', return_value=True)
-    @patch('modelcat.connector.upload.hash_dataset', return_value="test_sha_hash")
-    @patch('modelcat.connector.upload.check_aws_configuration', return_value=True)
-    @patch('modelcat.connector.upload.check_s3_access')
-    def test_dataset_check_success(self, mock_check_s3_access, mock_check_aws_config, mock_hash_dataset, mock_exists):
+    @patch("modelcat.connector.upload.osp.exists", return_value=True)
+    @patch("modelcat.connector.upload.hash_dataset", return_value="test_sha_hash")
+    @patch("modelcat.connector.upload.check_aws_configuration", return_value=True)
+    @patch("modelcat.connector.upload.check_s3_access")
+    def test_dataset_check_success(
+        self,
+        mock_check_s3_access,
+        mock_check_aws_config,
+        mock_hash_dataset,
+        mock_exists,
+    ):
         """Test successful dataset check."""
         # Skip the actual dataset_check in the constructor
-        with patch.object(DatasetUploader, 'dataset_check', return_value=True):
+        with patch.object(DatasetUploader, "dataset_check", return_value=True):
             # Mock the file operations
-            dataset_infos_mock = mock_open(read_data=json.dumps(self.mock_dataset_infos))
-            validator_log_mock = mock_open(read_data="Validation passed and signed: test_sha_hash")
+            dataset_infos_mock = mock_open(
+                read_data=json.dumps(self.mock_dataset_infos)
+            )
+            validator_log_mock = mock_open(
+                read_data="Validation passed and signed: test_sha_hash"
+            )
 
             # Create a side_effect function that returns different mock objects based on the file path
             def open_side_effect(file, *args, **kwargs):
-                if 'dataset_infos.json' in str(file):
+                if "dataset_infos.json" in str(file):
                     return dataset_infos_mock()
-                elif 'dataset_validator_log.txt' in str(file):
+                elif "dataset_validator_log.txt" in str(file):
                     return validator_log_mock()
                 return mock_open().return_value
 
             # Apply the mock with side_effect
-            with patch('builtins.open', side_effect=open_side_effect):
+            with patch("builtins.open", side_effect=open_side_effect):
                 # Create the uploader instance
                 uploader = DatasetUploader(
                     dataset_root_dir=self.dataset_root,
                     working_dir=self.dataset_root,
                     group_id=self.group_id,
-                    oauth_token=self.oauth_token
+                    oauth_token=self.oauth_token,
                 )
 
                 # Override the mocked dataset_check to test the actual method
@@ -171,17 +192,29 @@ class TestDatasetUploader(unittest.TestCase):
                 # hash_dataset is not called in dataset_check when validator_log exists
                 # and contains a valid signature, so we don't assert it here
 
-    @patch('modelcat.connector.upload.run_cli_command')
-    @patch('modelcat.connector.upload.ProductAPIClient')
-    @patch('modelcat.connector.upload.DatasetUploader.dataset_check', return_value=True)
-    @patch('modelcat.connector.upload.DatasetUploader.obtain_s3_access', return_value=None)
-    @patch('modelcat.connector.upload.check_aws_configuration', return_value=True)
-    @patch('modelcat.connector.upload.osp.exists', return_value=True)
-    @patch('modelcat.connector.upload.check_s3_access')
-    @patch('modelcat.connector.upload.DatasetUploader._count_files', return_value=(10, 1000))
+    @patch("modelcat.connector.upload.run_cli_command")
+    @patch("modelcat.connector.upload.ProductAPIClient")
+    @patch("modelcat.connector.upload.DatasetUploader.dataset_check", return_value=True)
+    @patch(
+        "modelcat.connector.upload.DatasetUploader.obtain_s3_access", return_value=None
+    )
+    @patch("modelcat.connector.upload.check_aws_configuration", return_value=True)
+    @patch("modelcat.connector.upload.osp.exists", return_value=True)
+    @patch("modelcat.connector.upload.check_s3_access")
+    @patch(
+        "modelcat.connector.upload.DatasetUploader._count_files",
+        return_value=(10, 1000),
+    )
     def test_upload_s3_success(
-            self, mock_count_files, mock_check_s3_access, mock_exists,
-            mock_check_aws_config, mock_obtain_s3_access, mock_dataset_check, mock_api_client, mock_run_cli
+        self,
+        mock_count_files,
+        mock_check_s3_access,
+        mock_exists,
+        mock_check_aws_config,
+        mock_obtain_s3_access,
+        mock_dataset_check,
+        mock_api_client,
+        mock_run_cli,
     ):
         """Test successful S3 upload."""
         # Mock dependencies
@@ -189,7 +222,7 @@ class TestDatasetUploader(unittest.TestCase):
         mock_client_instance.register_dataset.return_value = {"uuid": "test-uuid"}
         mock_client_instance.submit_dataset_analysis.return_value = {
             "uuid": "test-uuid",
-            "results_url": "/results?uuid=test-uuid"
+            "results_url": "/results?uuid=test-uuid",
         }
         mock_api_client.return_value = mock_client_instance
 
@@ -197,13 +230,13 @@ class TestDatasetUploader(unittest.TestCase):
         dataset_infos_mock = mock_open(read_data=json.dumps(self.mock_dataset_infos))
 
         # Apply the mock with side_effect
-        with patch('builtins.open', return_value=dataset_infos_mock()):
+        with patch("builtins.open", return_value=dataset_infos_mock()):
             # Create uploader instance
             uploader = DatasetUploader(
                 dataset_root_dir=self.dataset_root,
                 working_dir=self.dataset_root,
                 group_id=self.group_id,
-                oauth_token=self.oauth_token
+                oauth_token=self.oauth_token,
             )
 
             # Run the upload
@@ -215,21 +248,27 @@ class TestDatasetUploader(unittest.TestCase):
         # Verify API client was created and used
         mock_api_client.assert_called_once()
         mock_client_instance.register_dataset.assert_called_once_with(
-            name="test_dataset",
-            s3_uri=ANY,
-            dataset_infos=self.mock_dataset_infos
+            name="test_dataset", s3_uri=ANY, dataset_infos=self.mock_dataset_infos
         )
         mock_client_instance.submit_dataset_analysis.assert_called_once()
 
-    @patch('modelcat.connector.upload.argparse.ArgumentParser.parse_args')
-    @patch('modelcat.connector.utils.common.resolve_version', return_value="1.0.0")
-    @patch('modelcat.connector.upload.osp.join')
-    @patch('builtins.open', new_callable=mock_open, read_data=json.dumps({
-        "group_id": "12345678-1234-1234-1234-123456789012",
-        "oauth_token": "1_1234567890abcdef1234567890abcdef12345678"
-    }))
-    @patch('modelcat.connector.upload.DatasetUploader')
-    def test_upload_cli(self, mock_uploader, mock_file, mock_join, mock_get_dist, mock_parse_args):
+    @patch("modelcat.connector.upload.argparse.ArgumentParser.parse_args")
+    @patch("modelcat.connector.utils.common.resolve_version", return_value="1.0.0")
+    @patch("modelcat.connector.upload.osp.join")
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=json.dumps(
+            {
+                "group_id": "12345678-1234-1234-1234-123456789012",
+                "oauth_token": "1_1234567890abcdef1234567890abcdef12345678",
+            }
+        ),
+    )
+    @patch("modelcat.connector.upload.DatasetUploader")
+    def test_upload_cli(
+        self, mock_uploader, mock_file, mock_join, mock_get_dist, mock_parse_args
+    ):
         """Test the upload_cli function."""
         # Mock command line arguments
         args = MagicMock()
@@ -265,5 +304,5 @@ class TestDatasetUploader(unittest.TestCase):
         mock_uploader_instance.upload_s3.assert_called_once()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

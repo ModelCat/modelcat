@@ -9,6 +9,6 @@ class TestPkg(unittest.TestCase):
         self.assertIsInstance(connector.__version__, str)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     log.getLogger().setLevel(log.INFO)
     unittest.main()

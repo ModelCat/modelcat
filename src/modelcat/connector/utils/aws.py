@@ -11,7 +11,7 @@ def check_awscli() -> bool:
     outputs = []
     try:
         run_cli_command(cmd, line_parser=lambda line: outputs.append(line))
-        log.info(f'awscli version: {" ".join(outputs)}')
+        log.info(f"awscli version: {' '.join(outputs)}")
     except CLICommandError:
         return False
 
@@ -30,9 +30,10 @@ def check_aws_configuration(verbose: int = 0) -> bool:
     return True
 
 
-@retry(exceptions=Exception, delay=20, tries=6, backoff=1, logger=None)  # trying for 6 * 20 = 120 seconds
+@retry(
+    exceptions=Exception, delay=20, tries=6, backoff=1, logger=None
+)  # trying for 6 * 20 = 120 seconds
 def check_s3_access(group_id: str, verbose: bool = False) -> None:
-
     cmd = [
         "aws",
         "s3",
