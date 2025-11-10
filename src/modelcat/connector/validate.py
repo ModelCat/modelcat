@@ -923,11 +923,14 @@ class DatasetValidator:
             m_height = "height" not in img
             if (m_width or m_height):
                 if self.auto_fix_2 == UserChoice.YES:
-                    if not self.autofill_img_dim(img):
-                        if m_width:
-                            return self._create_param_error_message(coco_file_name, "images.width")
-                        if m_height:
-                            return self._create_param_error_message(coco_file_name, "images.height")
+                        if self.autofill_img_dim(img):
+                            # Save the updated coco dict back to the file
+                            self.reload_coco(os.path.join(self.ann_dir, coco_file_name), coco)
+                        else:
+                            if m_width:
+                                return self._create_param_error_message(coco_file_name, "images.width")
+                            if m_height:
+                                return self._create_param_error_message(coco_file_name, "images.height")
                 else:
                     if m_width:
                         return self._create_param_error_message(coco_file_name, "images.width")
