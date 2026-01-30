@@ -5,7 +5,7 @@ import logging as log
 import os.path as osp
 import os
 import math
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from itertools import combinations
 from collections import Counter
 import shutil
@@ -438,6 +438,9 @@ class DatasetValidator:
                     }
                 )
 
+            m = self.check_categories_have_annotations(coco, coco_file_name)
+            messages.extend(m)
+
             missing_images = []
             imgs_without_anns = []
 
@@ -574,6 +577,49 @@ class DatasetValidator:
                 }
             )
 
+        return messages
+    
+    def check_categories_have_annotations(
+        self,
+        coco: Dict[str, Any],
+        coco_file_name: Optional[str] = "",
+    ) -> List[Dict[str, str]]:
+        """
+        Validate that every category in coco["categories"] has at least one annotation in coco["annotations"].
+        Returns a list of message dicts (type/message).
+        """
+        messages: List[Dict[str, str]] = []
+
+        categories = coco.get("categories", [])
+        annotations = coco.get("annotations", [])
+
+        category_ids = [cat.get("id") for cat in categories if "id" in cat]
+        cat_id_to_name = {cat["id"]: cat.get("name", str(cat["id"])) for cat in categories if "id" in cat}
+
+        # only count annotations that reference valid categories (avoid noise if file is malformed)
+        valid_category_ids = set(category_ids)
+        ann_cat_ids = [
+            ann.get("category_id")
+            for ann in annotations
+            if ann.get("category_id") in valid_category_ids
+        ]
+
+        cat_counts = Counter(ann_cat_ids)
+
+        missing_cat_ids = [cid for cid in category_ids if cat_counts.get(cid, 0) == 0]
+        if not missing_cat_ids:
+            return messages
+
+        missing_cat_names = [cat_id_to_name.get(cid, str(cid)) for cid in missing_cat_ids]
+        messages.append(
+            {
+                "type": "error",
+                "message": (
+                    f'The annotation file "{coco_file_name}" contains categories with no images: '
+                    f"{missing_cat_names}. Ensure each category has at least one annotated instance or remove the category."
+                ),
+            }
+        )
         return messages
 
     def check_for_duplicate_images(self, coco_path: str):
