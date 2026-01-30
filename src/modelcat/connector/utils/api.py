@@ -2,10 +2,9 @@ import requests
 import json
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from typing import Dict, Optional
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Union
+from typing import Union, Optional, Dict, List
 
 from modelcat.connector.utils.consts import PACKAGE_NAME
 
@@ -13,7 +12,8 @@ from modelcat.connector.utils.consts import PACKAGE_NAME
 @dataclass
 class APIConfig:
     """Configuration for the API client"""
-    base_url: Union[str, list[str]]
+
+    base_url: Union[str, List[str]]
     oauth_token: Optional[str] = None
     timeout: int = 120
     max_retries: int = 3
@@ -23,6 +23,7 @@ class APIConfig:
 
 class APIError(Exception):
     """Base exception for API-related errors"""
+
     pass
 
 
@@ -38,7 +39,7 @@ class BaseAPIClient:
         retry_strategy = Retry(
             total=self.config.max_retries,
             backoff_factor=self.config.backoff_factor,
-            status_forcelist=list(self.config.retry_status_codes)
+            status_forcelist=list(self.config.retry_status_codes),
         )
 
         session = requests.Session()
@@ -50,13 +51,11 @@ class BaseAPIClient:
 
     def _get_headers(self, additional_headers: Optional[Dict] = None) -> Dict:
         """Generate headers for the request"""
-        headers = {
-            'Content-Type': 'application/json'
-        }
+        headers = {"Content-Type": "application/json"}
 
         # Add OAuth token if available
         if self.config.oauth_token:
-            headers['Authorization'] = f"Bearer {self.config.oauth_token}"
+            headers["Authorization"] = f"Bearer {self.config.oauth_token}"
 
         if additional_headers:
             headers.update(additional_headers)
@@ -64,13 +63,13 @@ class BaseAPIClient:
         return headers
 
     def _make_request(
-            self,
-            method: str,
-            endpoint: str,
-            data: Optional[Dict] = None,
-            params: Optional[Dict] = None,
-            headers: Optional[Dict] = None,
-            files: Optional[Dict] = None,
+        self,
+        method: str,
+        endpoint: str,
+        data: Optional[Dict] = None,
+        params: Optional[Dict] = None,
+        headers: Optional[Dict] = None,
+        files: Optional[Dict] = None,
     ) -> Dict:
         """
         Make an HTTP request with error handling
@@ -92,10 +91,10 @@ class BaseAPIClient:
         try:
             headers = self._get_headers(headers)
             if files is not None:
-                headers.pop('Content-Type', None)
-                send_kwargs = {'data': data}
+                headers.pop("Content-Type", None)
+                send_kwargs = {"data": data}
             else:
-                send_kwargs = {'json': data}
+                send_kwargs = {"json": data}
 
             url = f"{self.config.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
             response = self._session.request(
@@ -115,8 +114,8 @@ class BaseAPIClient:
             response.raise_for_status()
 
             # Handle API-specific success/error format
-            if isinstance(result, dict) and not result.get('success', True):
-                error_msg = '; '.join(result.get('errors', ['Unknown error']))
+            if isinstance(result, dict) and not result.get("success", True):
+                error_msg = "; ".join(result.get("errors", ["Unknown error"]))
                 raise APIError(f"API returned error: {error_msg}")
 
             return result
@@ -125,19 +124,54 @@ class BaseAPIClient:
             raise APIError(f"Failed to parse API response: {str(e)}")
         except requests.exceptions.RequestException as e:
             if result is not None:
-                raise APIError(f"""API request failed with the following details:
+                raise APIError(
+                    f"""API request failed with the following details:
 {json.dumps(result, indent=2)}"""
-                               )
+                )
             raise APIError(f"Request failed: {str(e)}")
 
     def __del__(self):
         """Cleanup method to ensure session is closed"""
-        if hasattr(self, '_session'):
+        if hasattr(self, "_session"):
             self._session.close()
 
 
 class ProductAPIClient(BaseAPIClient):
     """Client for storage token related API endpoints"""
+
+    def get_me(self):
+        """
+        Get information about the current user for API validation
+
+        Returns:
+            Dict containing user information:
+                - user_id
+                - full_name
+                - email
+                - creation_date
+                - modification_date
+                - last_seen_date
+                - origin
+                - groups
+        """
+        result = self._make_request(
+            method="GET",
+            endpoint="/api/users/me",
+        )
+        if not result:
+            raise APIError("No data returned from API")
+
+        required_fields = {
+            "user_id",
+            "full_name",
+            "email",
+            "origin",
+            "groups",
+        }
+        if not all(field in result for field in required_fields):
+            raise APIError("Missing required fields in API response")
+
+        return result
 
     def get_aws_access(self, group_id: str) -> Dict:
         """
@@ -154,19 +188,24 @@ class ProductAPIClient(BaseAPIClient):
                 - expiration_date
         """
         result = self._make_request(
-            method='POST',
-            endpoint='/api/storage/token/generate',
-            data={'groupId': group_id}
+            method="POST",
+            endpoint="/api/storage/token/generate",
+            data={"groupId": group_id},
         )
 
-        if not result.get('data'):
+        if not result or not result.get("data"):
             raise APIError("No data returned from API")
 
-        required_fields = {'group_id', 'access_key_id', 'secret_access_key', 'expiration_date'}
-        if not all(field in result['data'] for field in required_fields):
+        required_fields = {
+            "group_id",
+            "access_key_id",
+            "secret_access_key",
+            "expiration_date",
+        }
+        if not all(field in result["data"] for field in required_fields):
             raise APIError("Missing required fields in API response")
 
-        return result['data']
+        return result["data"]
 
     def register_dataset(self, name: str, s3_uri: str, dataset_infos: dict) -> dict:
         """
@@ -189,26 +228,95 @@ class ProductAPIClient(BaseAPIClient):
             "datasetInfos": dataset_infos,
         }
         result = self._make_request(
-            method='POST',
-            endpoint='/api/datasets/register',
-            data=data
+            method="POST", endpoint="/api/datasets/register", data=data
         )
-        if not result.get('success', True):
-            error_msg = '; '.join(result.get('errors', ['Dataset registration failed.']))
+        if not result.get("success", True):
+            error_msg = "; ".join(
+                result.get("errors", ["Dataset registration failed."])
+            )
             raise APIError(f"Dataset registration error: {error_msg}")
 
         return result
 
+    def update_dataset(
+        self,
+        dataset_uuid: str,
+        dataset_infos: dict,
+        hidden: bool = False,
+        task_types: Optional[List[str]] = None,
+        access: Optional[dict] = None,
+    ):
+        """
+        Update an existing dataset using the /api/datasets/{dataset_uuid} endpoint.
+
+        Args:
+            dataset_uuid: UUID of the dataset to update.
+            dataset_infos: Dict containing updated dataset metadata/info.
+            hidden: Whether the dataset should be hidden.
+            task_types: List of task types associated with the dataset.
+            access: Dict containing access control settings for groups.
+
+        Returns:
+            Dict with the API response.
+
+        Raises:
+            APIError: If update fails.
+        """
+        body = {"datasetInfos": dataset_infos}
+        if hidden is not None:
+            body["hidden"] = hidden
+        if task_types is not None:
+            body["taskTypes"] = task_types
+        if access is not None:
+            body["access"] = access
+
+        result = self._make_request(
+            method="PUT",
+            endpoint=f"/api/datasets/{dataset_uuid}",
+            data=body,
+        )
+
+        if not result.get("success", True):
+            error_msg = "; ".join(result.get("errors", ["Dataset update failed."]))
+            raise APIError(f"Dataset update error: {error_msg}")
+
+        return result
+
+    def list_datasets(
+        self, fields: Optional[List[str]] = None, include_dataset_infos: bool = False
+    ):
+        """
+        List all user-visible datasets using the /api/datasets/list endpoint.
+
+        Args:
+            fields: List of metadata fields to include in the response (e.g. ["description", "splits"]).
+            include_dataset_infos: Whether to include dataset metadata/info in the response.
+
+        Returns:
+            List of datasets visible to the current user.
+        """
+        params = {}
+        if fields:
+            params["fields"] = ",".join(fields)
+        if include_dataset_infos:
+            params["includeDatasetInfos"] = "true"
+
+        result = self._make_request(
+            method="GET", endpoint="/api/datasets/list", params=params
+        )
+
+        return result
+
     def submit_dataset_analysis(
-            self,
-            dataset_uri: str,
-            group_id: str,
-            dataset_name: str = None,
-            job_name: str = None,
-            env: str = None,
+        self,
+        dataset_uri: str,
+        group_id: str,
+        dataset_name: Optional[str] = None,
+        job_name: Optional[str] = None,
+        env: Optional[str] = None,
     ):
         now_utc = datetime.now(timezone.utc)
-        now_utc_str = now_utc.strftime('%b %d, %Y %H:%M UTC')
+        now_utc_str = now_utc.strftime("%b %d, %Y %H:%M UTC")
         data: dict = {
             "jobType": "Dataset Analysis",
             "jobDescription": f"Automatically generated by {PACKAGE_NAME} on {now_utc_str}",
@@ -236,13 +344,13 @@ class ProductAPIClient(BaseAPIClient):
         data["parameters"] = json.dumps(data["parameters"])
 
         result = self._make_request(
-            method='POST',
-            endpoint='/api/submit',
+            method="POST",
+            endpoint="/api/submit",
             data=data,
-            files={'file': (None, 'data')},
+            files={"file": (None, "data")},
         )
-        if not result.get('success', True):
-            error_msg = '; '.join(result.get('errors', ['Job submission failed.']))
+        if not result.get("success", True):
+            error_msg = "; ".join(result.get("errors", ["Job submission failed."]))
             raise APIError(f"Job submission error: {error_msg}")
 
-        return result
+        return result["data"]

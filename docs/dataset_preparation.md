@@ -13,6 +13,7 @@ Your dataset needs to be structured in a certain way to be properly recognized b
 * `dataset_infos.json` – high-level meta-description of your dataset
 * `annotations/` - directory containing splits/annotations
 * `images/` - directory containing images of your dataset
+* `thumbnail.jpg` [_optional_] - image you'd like to use as your dataset's thumbnail on ModelCat. If not provided, one will be selected randomly from your dataset.
 
 Together with this instruction you can find [dataset samples](../../../sample_datasets/) which demonstrate a correct way to prepare your data:
 
