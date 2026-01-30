@@ -661,7 +661,7 @@ class DatasetValidator:
             )
 
         return messages
-    
+
     def check_categories_have_annotations(
         self,
         coco: Dict[str, Any],
