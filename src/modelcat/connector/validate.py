@@ -432,7 +432,19 @@ class DatasetValidator:
         if not annotations_required:
             return []
 
-        for ann_file in ann_file_names:
+        if len(ann_file_names) != len(split_names):
+            messages.append(
+                {
+                    "type": "error",
+                    "message": (
+                        'The number of "annotation_files" does not match the number of '
+                        '"split_names" in "dataset_infos.json".'
+                    ),
+                }
+            )
+            return messages
+
+        for ann_file, split_name in zip(ann_file_names, split_names):
             if not osp.exists(osp.join(self.ann_dir, ann_file)):
                 messages.append(
                     {
@@ -443,7 +455,7 @@ class DatasetValidator:
                 )
             else:
                 messages += self.validate_coco_file(
-                    osp.join(self.ann_dir, ann_file), label_names
+                    osp.join(self.ann_dir, ann_file), split_name, label_names
                 )
 
         for ann_file in ann_file_names:
@@ -466,7 +478,7 @@ class DatasetValidator:
             )
         return messages
 
-    def validate_coco_file(self, coco_file_path: str, label_names: List[str]):
+    def validate_coco_file(self, coco_file_path: str, split_name: str, label_names: List[str]):
         messages = []
         coco_file_name = osp.basename(coco_file_path)
 
@@ -496,7 +508,7 @@ class DatasetValidator:
                     }
                 )
 
-            m = self.check_categories_have_annotations(coco, coco_file_name)
+            m = self.check_categories_have_annotations(coco, coco_file_name, split_name)
             messages.extend(m)
 
             missing_images = []
@@ -666,6 +678,7 @@ class DatasetValidator:
         self,
         coco: Dict[str, Any],
         coco_file_name: Optional[str] = "",
+        split_name: Optional[str] = "",
     ) -> List[Dict[str, str]]:
         """
         Validate that every category in coco["categories"] has at least one annotation in coco["annotations"].
@@ -694,11 +707,17 @@ class DatasetValidator:
             return messages
 
         missing_cat_names = [cat_id_to_name.get(cid, str(cid)) for cid in missing_cat_ids]
+
+        if split_name.lower() == "train":
+            message_type = "error"
+        else:
+            message_type = "warning"
+
         messages.append(
             {
-                "type": "error",
+                "type": message_type,
                 "message": (
-                    f'The annotation file "{coco_file_name}" contains categories with no images: '
+                    f'The annotation file "{coco_file_name}" in split "{split_name}" contains categories with no images: '
                     f"{missing_cat_names}. Ensure each category has at least one annotated instance or remove the category."
                 ),
             }
