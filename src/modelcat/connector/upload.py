@@ -442,7 +442,7 @@ def upload_cli():
 
     print(
         f"{PACKAGE_NAME} (v{resolve_version(ROOT_PACKAGE_NAME)}) "
-        f"- dataset validation utility".center(100)
+        f"- dataset upload utility".center(100)
     )
     print("\n" + "-" * 100)
 
