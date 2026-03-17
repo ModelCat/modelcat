@@ -9,6 +9,7 @@ from typing import List, Optional
 from itertools import combinations
 from collections import Counter
 import shutil
+from PIL import Image
 from modelcat.connector.utils import hash_dataset
 import importlib.metadata
 from pycocotools.coco import COCO
@@ -53,6 +54,44 @@ class DatasetValidator:
                 pass
         else:
             self.log_filepath = None
+
+    def create_thumbnail(self, image_path: str, thumbnail_path: str, max_width: int = 260, quality: int = 70):
+        """
+        Creates a thumbnail from an image file.
+
+        Args:
+            image_path (str): Path to the source image
+            thumbnail_path (str): Path to save the thumbnail
+            max_width (int): Maximum width of the thumbnail
+            quality (int): JPEG encoding quality level
+
+        Returns:
+            None
+        """
+        try:
+            with Image.open(image_path) as img:
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                width, height = img.size
+                if height >= 3 * width:
+                    ratio = 260 / width
+                    new_width = 260
+                    new_height = int(height * ratio)
+                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    left = 0
+                    top = (new_height - 260) // 2
+                    right = 260
+                    bottom = top + 260
+                    img = img.crop((left, top, right, bottom))
+                elif width > max_width:
+                    ratio = max_width / width
+                    new_width = max_width
+                    new_height = int(height * ratio)
+                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                img.save(thumbnail_path, "JPEG", quality=quality)
+        except Exception as e:
+            log.warning(f"Failed to create optimized thumbnail: {e}. Falling back to copy.")
+            shutil.copy(image_path, thumbnail_path)
 
     def create_validation_mark(self):
         # check if any errors were found
@@ -108,7 +147,7 @@ class DatasetValidator:
             first_image = _get_first_image_from_dir(self.image_dir)
             if first_image is not None:
                 # No need to backup here as we're creating a new file, not modifying an existing one
-                shutil.copy(first_image, thumbnail_path)
+                self.create_thumbnail(first_image, thumbnail_path)
                 log.debug(
                     f"Auto-fix: thumbnail generated automatically from image '{first_image}'"
                 )
