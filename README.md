@@ -27,7 +27,7 @@ conda activate modelcat_env
 Clone and install the Python package:
 ```bash
 cd ~/ # Will install in user folder
-git clone git@github.com:Eta-Compute/modelcat.git
+git clone https://github.com/ModelCat/modelcat.git
 cd modelcat
 pip install -e .
 ```
