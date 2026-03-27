@@ -646,6 +646,11 @@ class DatasetValidator:
                             )
 
             category_ids = [cat["id"] for cat in coco["categories"]]
+            supercategories = []
+            for cat in coco["categories"]:
+                if "supercategory" not in cat:
+                    cat["supercategory"] = ""
+                supercategories.append(cat["supercategory"])
             image_ids = [img["id"] for img in coco["images"]]
             ann_ids = [ann["id"] for ann in coco["annotations"]]
             ann_img_ids = [ann["image_id"] for ann in coco["annotations"]]
