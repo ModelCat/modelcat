@@ -68,16 +68,11 @@ class DatasetUploader:
             print(f"Path does not exists: {dataset_root_dir}")
             exit(1)
 
-        if not check_aws_configuration():
-            exit(1)
-
-        if not self.dataset_check():
-            exit(1)
-
         with open(osp.join(self.dataset_root, "dataset_infos.json")) as fp:
             self.dataset_infos = json.load(fp)
         self.dataset_name = self.normalize_ds_name(list(self.dataset_infos.keys())[0])
         self.s3_uri = f"s3://{PRODUCT_S3_BUCKET}/account/{self.group_id}/datasets/{str(uuid.uuid4())}/"
+        self.api_client = None
 
     def dataset_check(self):
         ds_infos = osp.join(self.dataset_root, "dataset_infos.json")
@@ -161,19 +156,38 @@ class DatasetUploader:
 
         print("Verification successful.")
 
-    def upload_s3(self, on_existing_dataset_name: str = None):
+    def validate(self):
+        """
+        Validate AWS CLI, OAuth token and dataset signature.
+        This should be called before upload_s3() to fail early if token is invalid.
+        Token validation happens first (fast), followed by dataset signature verification (slow for large datasets).
+        """
+        # First, validate the local AWS configuration
+        if not check_aws_configuration():
+            exit(1)
+
+        # Then, validate the token by creating API client and obtaining S3 access
         api_config = APIConfig(
             base_url=PRODUCT_URL,
             oauth_token=self.oauth_token,
         )
-        api_client = ProductAPIClient(api_config)
+        self.api_client = ProductAPIClient(api_config)
 
-        self.obtain_s3_access(api_client, self.group_id, verbose=self.verbose > 0)
+        self.obtain_s3_access(self.api_client, self.group_id, verbose=self.verbose > 0)
+
+        if not self.dataset_check():
+            exit(1)
+
+    def upload_s3(self, on_existing_dataset_name: str = None):
+        if self.api_client is None:
+            raise RuntimeError(
+                "validate() must be called before upload_s3() to initialize API client"
+            )
 
         print("-" * 50)
         print("Checking for an existing dataset with the same name...")
 
-        datasets = api_client.list_datasets()
+        datasets = self.api_client.list_datasets()
 
         datasets_same_name = [
             ds for ds in datasets if ds.get("name") == self.dataset_name
@@ -273,7 +287,7 @@ class DatasetUploader:
                 # we register new datasets
                 print(f"Registering dataset in {PRODUCT_NAME} platform...")
 
-                register_data = api_client.register_dataset(
+                register_data = self.api_client.register_dataset(
                     name=self.dataset_name,
                     s3_uri=self.s3_uri,
                     dataset_infos=self.dataset_infos,
@@ -282,14 +296,14 @@ class DatasetUploader:
             else:
                 # we update old datasets
                 print(f"Updating dataset in {PRODUCT_NAME} platform...")
-                api_client.update_dataset(
+                self.api_client.update_dataset(
                     dataset_uuid=old_ds_uuid,
                     dataset_infos=self.dataset_infos,
                 )
                 ds_uuid = old_ds_uuid
 
             print("Running Dataset Analysis immediately after registration...")
-            da_data = api_client.submit_dataset_analysis(
+            da_data = self.api_client.submit_dataset_analysis(
                 dataset_uri=self.s3_uri,
                 group_id=self.group_id,
                 dataset_name=self.dataset_name,
@@ -442,7 +456,7 @@ def upload_cli():
 
     print(
         f"{PACKAGE_NAME} (v{resolve_version(ROOT_PACKAGE_NAME)}) "
-        f"- dataset validation utility".center(100)
+        f"- dataset upload utility".center(100)
     )
     print("\n" + "-" * 100)
 
@@ -473,6 +487,9 @@ def upload_cli():
         verbose=args.verbose,
         restore=restore,
     )
+
+    # Validate token and dataset signature before uploading
+    dsu.validate()
 
     dsu.upload_s3(on_existing_dataset_name=args.on_existing_dataset_name)
 
