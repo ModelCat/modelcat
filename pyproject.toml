@@ -110,7 +110,8 @@ dependencies = [ # Optional
   "pycocotools",
   "requests>=2,<3",
   "retry",
-  "pydantic<2"
+  "pydantic<2",
+  "Pillow"
 ]
 
 # List additional groups of dependencies here (e.g. development
