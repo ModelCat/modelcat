@@ -932,6 +932,21 @@ class DatasetValidator:
         except Exception:
             return []
 
+    def autofill_img_dim(self, img):
+        """
+        Auto-compute and fill missing width/height for an image dict using Pillow.
+        Returns True if successful.
+        """
+        image_path = osp.join(self.image_dir, img["file_name"])
+        try:
+            with Image.open(image_path) as im:
+                img["width"], img["height"] = im.size
+            log.info(f"Computed dimensions for {img['file_name']}: width={img['width']}, height={img['height']}")
+            return True
+        except Exception as e:
+            log.error(f"Failed to compute dimensions for {img['file_name']}: {e}")
+            return False
+
     def check_split_image_duplicates(self, ann_path: str):
         try:
             coco_file_name = osp.basename(ann_path)
@@ -1163,6 +1178,7 @@ class DatasetValidator:
                 )
 
         # images.* checks
+        needs_save = False
         for img in coco["images"]:
             if "id" not in img:
                 return self._create_param_error_message(coco_file_name, "images.id")
@@ -1170,10 +1186,27 @@ class DatasetValidator:
                 return self._create_param_error_message(
                     coco_file_name, "images.file_name"
                 )
-            if "width" not in img:
-                return self._create_param_error_message(coco_file_name, "images.width")
-            if "height" not in img:
-                return self._create_param_error_message(coco_file_name, "images.height")
+            # Check width and height, autofill if missing
+            m_width = "width" not in img
+            m_height = "height" not in img
+            if m_width or m_height:
+                if self.auto_fix_2 == UserChoice.YES:
+                    if self.autofill_img_dim(img):
+                        needs_save = True
+                    else:
+                        if m_width:
+                            return self._create_param_error_message(coco_file_name, "images.width")
+                        if m_height:
+                            return self._create_param_error_message(coco_file_name, "images.height")
+                else:
+                    if m_width:
+                        return self._create_param_error_message(coco_file_name, "images.width")
+                    if m_height:
+                        return self._create_param_error_message(coco_file_name, "images.height")
+
+        # Save the updated coco dict back to the file once, after all images are processed
+        if needs_save:
+            self.reload_coco(osp.join(self.ann_dir, coco_file_name), coco)
 
         # annotations.* checks
         for ann in coco["annotations"]:
