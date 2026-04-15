@@ -282,6 +282,33 @@ class ProductAPIClient(BaseAPIClient):
 
         return result
 
+    def get_dataset_by_path(self, s3_uri: str) -> dict:
+        """
+        Fetch a dataset by its S3 URI with access information.
+
+        Uses GET /api/datasets/fetch-by-path?uri=<s3_uri>.
+
+        Returns:
+            Dict containing dataset data, including:
+                - uuid
+                - name
+                - path
+                - hasOwnership (bool): True if the user has write access to the
+                  dataset's group, False if access is read-only (cross-group share).
+
+        Raises:
+            APIError: If the dataset is not found, access is denied, or the
+                      request fails for any other reason.
+        """
+        result = self._make_request(
+            method="GET",
+            endpoint="/api/datasets/fetch-by-path",
+            params={"uri": s3_uri},
+        )
+        if not result:
+            raise APIError("No data returned from API")
+        return result
+
     def list_datasets(
         self, fields: Optional[List[str]] = None, include_dataset_infos: bool = False
     ):
