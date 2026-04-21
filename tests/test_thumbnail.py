@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 from PIL import Image
-from modelcat.connector.validate import DatasetValidator
+from modelcat.connector.validate import DatasetValidator, create_thumbnail
 
 
 class TestThumbnailGeneration(unittest.TestCase):
@@ -28,8 +28,6 @@ class TestThumbnailGeneration(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            dsv = DatasetValidator(tmpdir, tmpdir)
-
             for f_name, ext in formats_to_test:
                 for w, h, ew, eh in scenarios:
                     with self.subTest(format=f_name, width=w, height=h):
@@ -40,13 +38,27 @@ class TestThumbnailGeneration(unittest.TestCase):
                         img = Image.new("RGB", (w, h), color="purple")
                         img.save(dummy_path, format=f_name)
 
-                        dsv.create_thumbnail(dummy_path, thumbnail_path, max_width=260)
+                        create_thumbnail(dummy_path, thumbnail_path, max_width=260)
 
                         self.assertTrue(os.path.exists(thumbnail_path))
                         with Image.open(thumbnail_path) as thumb:
                             # Output should always be JPEG
                             self.assertEqual(thumb.format, "JPEG")
                             self.assertEqual(thumb.size, (ew, eh))
+
+    def test_validator_method_delegates(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dummy_path = os.path.join(tmpdir, "src.png")
+            thumbnail_path = os.path.join(tmpdir, "thumb.jpg")
+            Image.new("RGB", (1000, 500), color="purple").save(dummy_path, format="PNG")
+
+            dsv = DatasetValidator(tmpdir, tmpdir)
+            dsv.create_thumbnail(dummy_path, thumbnail_path, max_width=260)
+
+            self.assertTrue(os.path.exists(thumbnail_path))
+            with Image.open(thumbnail_path) as thumb:
+                self.assertEqual(thumb.format, "JPEG")
+                self.assertEqual(thumb.size, (260, 130))
 
 
 if __name__ == '__main__':

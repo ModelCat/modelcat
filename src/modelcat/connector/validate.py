@@ -56,67 +56,8 @@ class DatasetValidator:
             self.log_filepath = None
 
     def create_thumbnail(self, image_path: str, thumbnail_path: str, max_width: int = 260, quality: int = 70):
-        """
-        Creates a thumbnail from an image file.
-
-        Args:
-            image_path (str): Path to the source image
-            thumbnail_path (str): Path to save the thumbnail
-            max_width (int): Maximum width of the thumbnail
-            quality (int): JPEG encoding quality level
-
-        Returns:
-            None
-        """
-        try:
-            # Prefer the Resampling enum when available, fall back to legacy constants.
-            _resampling_namespace = getattr(Image, "Resampling", Image)
-            RESAMPLE_LANCZOS = getattr(_resampling_namespace, "LANCZOS", getattr(Image, "LANCZOS", Image.BICUBIC))
-
-            with Image.open(image_path) as img:
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
-
-                width, height = img.size
-                target_size = max_width
-
-                # Handle extremely tall images (height >= 3x width)
-                if height >= 3 * width:
-                    ratio = target_size / width
-                    new_width = target_size
-                    new_height = int(height * ratio)
-                    img = img.resize((new_width, new_height), RESAMPLE_LANCZOS)
-                    # Center crop to target_size x target_size square
-                    left = 0
-                    top = (new_height - target_size) // 2
-                    right = target_size
-                    bottom = top + target_size
-                    img = img.crop((left, top, right, bottom))
-
-                # Handle extremely wide images (width >= 3x height)
-                elif width >= 3 * height:
-                    ratio = target_size / height
-                    new_height = target_size
-                    new_width = int(width * ratio)
-                    img = img.resize((new_width, new_height), RESAMPLE_LANCZOS)
-                    # Center crop to target_size x target_size square
-                    top = 0
-                    left = (new_width - target_size) // 2
-                    right = left + target_size
-                    bottom = target_size
-                    img = img.crop((left, top, right, bottom))
-
-                # Normal resizing: keep aspect ratio, capped at max_width
-                elif width > max_width:
-                    ratio = max_width / width
-                    new_width = max_width
-                    new_height = int(height * ratio)
-                    img = img.resize((new_width, new_height), RESAMPLE_LANCZOS)
-
-                img.save(thumbnail_path, "JPEG", quality=quality)
-        except Exception as e:
-            log.warning(f"Failed to create optimized thumbnail: {e}. Falling back to copy.")
-            shutil.copy(image_path, thumbnail_path)
+        """Creates optimized thumbnail for the dataset"""
+        return create_thumbnail(image_path, thumbnail_path, max_width, quality)
 
     def create_validation_mark(self):
         # check if any errors were found
@@ -1294,6 +1235,70 @@ class DatasetValidator:
         """
         self.backup_file(coco_file_path)
         _reload_coco(coco_file_path, coco_dict)
+
+
+def create_thumbnail(image_path: str, thumbnail_path: str, max_width: int = 260, quality: int = 70):
+    """
+    Creates a thumbnail from an image file.
+
+    Args:
+        image_path (str): Path to the source image
+        thumbnail_path (str): Path to save the thumbnail
+        max_width (int): Maximum width of the thumbnail
+        quality (int): JPEG encoding quality level
+
+    Returns:
+        None
+    """
+    try:
+        # Prefer the Resampling enum when available, fall back to legacy constants.
+        _resampling_namespace = getattr(Image, "Resampling", Image)
+        RESAMPLE_LANCZOS = getattr(_resampling_namespace, "LANCZOS", getattr(Image, "LANCZOS", Image.BICUBIC))
+
+        with Image.open(image_path) as img:
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+
+            width, height = img.size
+            target_size = max_width
+
+            # Handle extremely tall images (height >= 3x width)
+            if height >= 3 * width:
+                ratio = target_size / width
+                new_width = target_size
+                new_height = int(height * ratio)
+                img = img.resize((new_width, new_height), RESAMPLE_LANCZOS)
+                # Center crop to target_size x target_size square
+                left = 0
+                top = (new_height - target_size) // 2
+                right = target_size
+                bottom = top + target_size
+                img = img.crop((left, top, right, bottom))
+
+            # Handle extremely wide images (width >= 3x height)
+            elif width >= 3 * height:
+                ratio = target_size / height
+                new_height = target_size
+                new_width = int(width * ratio)
+                img = img.resize((new_width, new_height), RESAMPLE_LANCZOS)
+                # Center crop to target_size x target_size square
+                top = 0
+                left = (new_width - target_size) // 2
+                right = left + target_size
+                bottom = target_size
+                img = img.crop((left, top, right, bottom))
+
+            # Normal resizing: keep aspect ratio, capped at max_width
+            elif width > max_width:
+                ratio = max_width / width
+                new_width = max_width
+                new_height = int(height * ratio)
+                img = img.resize((new_width, new_height), RESAMPLE_LANCZOS)
+
+            img.save(thumbnail_path, "JPEG", quality=quality)
+    except Exception as e:
+        log.warning(f"Failed to create optimized thumbnail: {e}. Falling back to copy.")
+        shutil.copy(image_path, thumbnail_path)
 
 
 def _count_imgs_in_dir(directory: str) -> int:
