@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock, mock_open, ANY
 import json
 
 from modelcat.connector.upload import DatasetUploader, upload_cli
+from modelcat.connector.utils.api import APIError
 from modelcat.connector.utils.common import UserChoice
 from modelcat.consts import PRODUCT_S3_BUCKET
 
@@ -164,6 +165,132 @@ class TestDatasetUploader(unittest.TestCase):
         # Verify api_client is set after validation
         self.assertIsNotNone(uploader.api_client)
         self.assertEqual(uploader.api_client, mock_client_instance)
+
+    @patch("modelcat.connector.upload.check_aws_configuration")
+    @patch("modelcat.connector.upload.ProductAPIClient")
+    @patch(
+        "modelcat.connector.upload.DatasetUploader.obtain_s3_access",
+        side_effect=SystemExit(1),
+    )
+    @patch("modelcat.connector.upload.DatasetUploader.dataset_check")
+    @patch("modelcat.connector.upload.osp.exists")
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=json.dumps(
+            {
+                "test_dataset": {
+                    "description": "Test dataset",
+                    "citation": "",
+                    "homepage": "",
+                    "license": "",
+                    "features": {},
+                    "splits": {
+                        "train": {
+                            "name": "train",
+                            "num_bytes": 1000,
+                            "num_examples": 10,
+                        }
+                    },
+                    "supervised_keys": None,
+                    "builder_name": "test_builder",
+                    "dataset_size": 5000,
+                }
+            }
+        ),
+    )
+    def test_validate_exits_before_dataset_check_if_obtain_s3_access_fails(
+        self,
+        mock_open,
+        mock_exists,
+        mock_dataset_check,
+        mock_obtain_s3_access,
+        mock_api_client,
+        mock_check_aws_config,
+    ):
+        """If token / platform access fails, do not run dataset_check (no slow hash)."""
+        mock_check_aws_config.return_value = True
+        mock_exists.return_value = True
+        mock_client_instance = MagicMock()
+        mock_api_client.return_value = mock_client_instance
+
+        uploader = DatasetUploader(
+            dataset_root_dir=self.dataset_root,
+            working_dir=self.dataset_root,
+            group_id=self.group_id,
+            oauth_token=self.oauth_token,
+        )
+
+        with self.assertRaises(SystemExit) as cm:
+            uploader.validate()
+
+        self.assertEqual(cm.exception.code, 1)
+        mock_obtain_s3_access.assert_called_once()
+        mock_dataset_check.assert_not_called()
+
+    @patch("modelcat.connector.upload.check_aws_configuration", return_value=True)
+    @patch("modelcat.connector.upload.ProductAPIClient")
+    @patch("modelcat.connector.upload.time.sleep")
+    @patch("modelcat.connector.upload.DatasetUploader.dataset_check")
+    @patch("modelcat.connector.upload.osp.exists", return_value=True)
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=json.dumps(
+            {
+                "test_dataset": {
+                    "description": "Test dataset",
+                    "citation": "",
+                    "homepage": "",
+                    "license": "",
+                    "features": {},
+                    "splits": {
+                        "train": {
+                            "name": "train",
+                            "num_bytes": 1000,
+                            "num_examples": 10,
+                        }
+                    },
+                    "supervised_keys": None,
+                    "builder_name": "test_builder",
+                    "dataset_size": 5000,
+                }
+            }
+        ),
+    )
+    def test_validate_exits_before_dataset_check_on_expired_token_apierror(
+        self,
+        mock_open,
+        mock_exists,
+        mock_dataset_check,
+        mock_sleep,
+        mock_api_client,
+        mock_check_aws_config,
+    ):
+        """
+        Real APIError from get_aws_access (e.g. expired token) should exit
+        before dataset_check — matches PR fail-fast behavior.
+        """
+        mock_client_instance = MagicMock()
+        mock_client_instance.get_aws_access.side_effect = APIError(
+            "Invalid token: access token has expired"
+        )
+        mock_api_client.return_value = mock_client_instance
+
+        uploader = DatasetUploader(
+            dataset_root_dir=self.dataset_root,
+            working_dir=self.dataset_root,
+            group_id=self.group_id,
+            oauth_token=self.oauth_token,
+        )
+
+        with self.assertRaises(SystemExit) as cm:
+            uploader.validate()
+
+        self.assertEqual(cm.exception.code, 1)
+        mock_client_instance.get_aws_access.assert_called_once_with(self.group_id)
+        mock_dataset_check.assert_not_called()
+        mock_sleep.assert_not_called()
 
     @patch("modelcat.connector.upload.check_aws_configuration")
     @patch("modelcat.connector.upload.osp.exists")
