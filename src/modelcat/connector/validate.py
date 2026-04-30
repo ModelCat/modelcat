@@ -540,6 +540,11 @@ class DatasetValidator:
                 split_names[i1],
                 split_names[i2],
             )
+
+        messages += self.check_categories_used_in_train(
+            [osp.join(self.ann_dir, f) for f in ann_file_names],
+            split_names,
+        )
         return messages
 
     def validate_coco_file(self, coco_file_path: str, split_name: str, label_names: List[str]):
@@ -931,6 +936,64 @@ class DatasetValidator:
             return []
         except Exception:
             return []
+
+    def check_categories_used_in_train(
+        self,
+        ann_paths: List[str],
+        split_names: List[str],
+    ) -> List[Dict[str, str]]:
+        """
+        Validate that any category annotated in val/test splits is also annotated
+        in the train split. Categories evaluated but never trained cannot be
+        learned by the model, so this is treated as an error.
+
+        Returns a list of message dicts (type/message).
+        """
+        messages: List[Dict[str, str]] = []
+
+        used_by_split: Dict[str, set] = {}
+        cat_id_to_name: Dict[int, str] = {}
+        for ann_path, split_name in zip(ann_paths, split_names):
+            try:
+                with open(ann_path, "r") as f:
+                    coco = json.load(f)
+            except Exception:
+                continue
+
+            used_by_split[split_name.lower()] = {
+                ann["category_id"]
+                for ann in coco.get("annotations", [])
+                if "category_id" in ann
+            }
+            for cat in coco.get("categories", []):
+                if "id" in cat and cat["id"] not in cat_id_to_name:
+                    cat_id_to_name[cat["id"]] = cat.get("name", str(cat["id"]))
+
+        if "train" not in used_by_split:
+            return messages
+
+        train_used = used_by_split["train"]
+        for split_name in split_names:
+            sn_lower = split_name.lower()
+            if sn_lower == "train":
+                continue
+            split_used = used_by_split.get(sn_lower, set())
+            missing = split_used - train_used
+            if not missing:
+                continue
+            missing_named = sorted(
+                cat_id_to_name.get(cid, str(cid)) for cid in missing
+            )
+            messages.append(
+                {
+                    "type": "error",
+                    "message": (
+                        f'Categories annotated in "{split_name}" but not in "train": '
+                        f"{missing_named}. Model cannot learn them."
+                    ),
+                }
+            )
+        return messages
 
     def autofill_img_dim(self, img):
         """
