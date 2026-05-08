@@ -192,7 +192,7 @@ class Annotation(BaseModel):
     image_id: Union[int, float, str]
     category_id: int
     bbox: Optional[List[Union[int, float]]] = Field(default_factory=list)
-    segmentation: Optional[List[List[Union[int, float]]]] = None
+    segmentation: Optional[Union[List[List[Union[int, float]]], Dict]] = None
     iscrowd: Optional[int] = None  # allow None/0/1
     area: Optional[Union[int, float]] = None
 
