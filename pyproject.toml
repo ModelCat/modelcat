@@ -155,6 +155,11 @@ modelcat_setup     = "modelcat.connector.setup:setup_cli"
 # installed, specify them here.
 #package-data = {"sample" = ["*.dat"]}
 
+[tool.pytest.ini_options]
+markers = [
+    "e2e: End-to-end CLI validation tests",
+]
+
 [build-system]
 # These are the assumed default build requirements from pip:
 # https://pip.pypa.io/en/stable/reference/pip/#pep-517-and-518-support

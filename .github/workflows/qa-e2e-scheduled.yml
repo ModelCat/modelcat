@@ -1,0 +1,197 @@
+# Scheduled (and manual) run of E2E dataset validation tests.
+#
+# No secrets required — these tests run entirely offline against sample datasets.
+#
+# Optional (Slack): QA_SLACK_BOT_TOKEN = Bot User OAuth Token (starts with xoxb-).
+#   Create at api.slack.com/apps → Your App → OAuth & Permissions → Bot User OAuth Token.
+#   Scopes: chat:write, chat:write.public. Invite the bot to channel C0AMK1P30HE (or it must have chat:write.public).
+name: QA ModelCat E2E scheduled
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 12 * * *'   # 12:47 UTC daily (30 min after Playwright run)
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
+
+env:
+  QA_SLACK_CHANNEL_ID: 'C0AMK1P30HE'
+
+jobs:
+  tests:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    outputs:
+      total: ${{ steps.summary.outputs.total }}
+      passed: ${{ steps.summary.outputs.passed }}
+      failed: ${{ steps.summary.outputs.failed }}
+      errors: ${{ steps.summary.outputs.errors }}
+      slack_message: ${{ steps.summary.outputs.slack_message }}
+      message_color: ${{ steps.summary.outputs.message_color }}
+      message_status: ${{ steps.summary.outputs.message_status }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install package and test dependencies
+        run: |
+          pip install -e .
+          pip install pytest
+
+      - name: Run E2E tests
+        id: run-tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/e2e/ -m e2e -v \
+            --tb=short \
+            --junitxml=test-results.xml \
+            --no-header \
+            2>&1 | tee test-output.txt
+
+      - name: Parse results and build summary
+        id: summary
+        run: |
+          LAST_LINE=$(grep -E '^(FAILED|PASSED|ERROR|=)' test-output.txt | tail -1)
+
+          PASSED=$(echo "$LAST_LINE" | grep -oP '\d+(?= passed)' || echo "0")
+          FAILED=$(echo "$LAST_LINE" | grep -oP '\d+(?= failed)' || echo "0")
+          ERRORS=$(echo "$LAST_LINE" | grep -oP '\d+(?= error)' || echo "0")
+          TOTAL=$((PASSED + FAILED + ERRORS))
+
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+
+          SUMMARY="*Results:* ${PASSED}/${TOTAL} passed"
+          if [ "$FAILED" != "0" ]; then
+            SUMMARY="${SUMMARY}, ${FAILED} failed"
+          fi
+          if [ "$ERRORS" != "0" ]; then
+            SUMMARY="${SUMMARY}, ${ERRORS} errors"
+          fi
+
+          FAILING_TESTS=""
+          if [ "$FAILED" != "0" ]; then
+            FAILING_TESTS=$(grep '^FAILED' test-output.txt | head -10 | sed 's/^FAILED /• /' | while read -r line; do printf "%s\\\\n" "$line"; done)
+            SUMMARY="${SUMMARY}\\n\\n*Failing tests:*\\n${FAILING_TESTS}"
+          fi
+
+          echo "slack_message=${SUMMARY}" >> $GITHUB_OUTPUT
+
+          if [ "${{ steps.run-tests.outcome }}" == "success" ]; then
+            echo "message_color=good" >> $GITHUB_OUTPUT
+            echo "message_status=success" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.run-tests.outcome }}" == "failure" ]; then
+            echo "message_color=danger" >> $GITHUB_OUTPUT
+            echo "message_status=failure" >> $GITHUB_OUTPUT
+          else
+            echo "message_color=warning" >> $GITHUB_OUTPUT
+            echo "message_status=cancelled" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test-results.xml
+            test-output.txt
+          retention-days: 14
+
+  notify-slack:
+    runs-on: ubuntu-22.04
+    if: always()
+    needs: [tests]
+    env:
+      QA_SLACK_CHANNEL_ID: 'C0AMK1P30HE'
+    steps:
+      - name: Set status emoji
+        id: status
+        run: |
+          if [ "${{ needs.tests.outputs.message_status }}" == "success" ]; then
+            echo "emoji=:white_check_mark:" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.tests.outputs.message_status }}" == "failure" ]; then
+            echo "emoji=:x:" >> $GITHUB_OUTPUT
+          else
+            echo "emoji=:octagonal_sign:" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.24.0
+        continue-on-error: true
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.QA_SLACK_BOT_TOKEN }}
+        with:
+          channel-id: ${{ env.QA_SLACK_CHANNEL_ID }}
+          payload: |
+            {
+              "text": "${{ steps.status.outputs.emoji }} E2E Test Results",
+              "attachments": [
+                {
+                  "color": "${{ needs.tests.outputs.message_color }}",
+                  "fallback": "QA ModelCat E2E – Daily Automated Tests: ${{ needs.tests.outputs.message_status }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*QA ModelCat E2E – Daily Automated Tests*"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "${{ needs.tests.outputs.slack_message }}"
+                      }
+                    },
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Status*\n${{ needs.tests.outputs.message_status }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Triggered by*\n${{ github.triggering_actor }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Trigger*\n${{ github.event_name }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Branch*\n`${{ github.ref_name }}`"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "actions",
+                      "elements": [
+                        {
+                          "type": "button",
+                          "text": {
+                            "type": "plain_text",
+                            "text": "View Pipeline",
+                            "emoji": true
+                          },
+                          "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
