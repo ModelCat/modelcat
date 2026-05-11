@@ -44,7 +44,7 @@ jobs:
       - name: Install package and test dependencies
         run: |
           pip install -e .
-          pip install pytest
+          pip install pytest pytest-html
 
       - name: Run E2E tests
         id: run-tests
@@ -54,6 +54,7 @@ jobs:
           python -m pytest tests/e2e/ -m e2e -v \
             --tb=short \
             --junitxml=test-results.xml \
+            --html=test-report.html --self-contained-html \
             --no-header \
             2>&1 | tee test-output.txt
 
@@ -91,6 +92,73 @@ jobs:
           SLACK_MSG="${SLACK_MSG}:fast_forward: Skipped: ${SKIPPED}"
 
           echo "slack_message=${SLACK_MSG}" >> $GITHUB_OUTPUT
+
+      - name: Generate GitHub Actions summary
+        if: always()
+        run: |
+          python - <<'PYEOF'
+          import xml.etree.ElementTree as ET
+
+          tree = ET.parse("test-results.xml")
+          root = tree.getroot()
+
+          suite = root.find("testsuite") if root.tag != "testsuite" else root
+          total = int(suite.get("tests", 0))
+          failures = int(suite.get("failures", 0))
+          errors = int(suite.get("errors", 0))
+          skipped = int(suite.get("skipped", 0))
+          passed = total - failures - errors - skipped
+          duration = float(suite.get("time", 0))
+
+          with open("$GITHUB_STEP_SUMMARY", "a") as f:
+              f.write("# Test results\n\n")
+              f.write(f"Total tests: {total} - Passed: {passed} - Failed: {failures + errors} - Skipped: {skipped}\n\n")
+
+              groups = {}
+              for tc in suite.iter("testcase"):
+                  classname = tc.get("classname", "Unknown")
+                  name = tc.get("name", "Unknown")
+                  time_taken = float(tc.get("time", 0))
+
+                  failure = tc.find("failure")
+                  skip = tc.find("skipped")
+                  error = tc.find("error")
+
+                  if failure is not None:
+                      status = "\u274c Fail"
+                      err_msg = (failure.get("message", "") or "")[:80]
+                  elif error is not None:
+                      status = "\u274c Error"
+                      err_msg = (error.get("message", "") or "")[:80]
+                  elif skip is not None:
+                      status = "\u23ed\ufe0f Skipped"
+                      err_msg = ""
+                  else:
+                      status = "\u2705 Pass"
+                      err_msg = ""
+
+                  if classname not in groups:
+                      groups[classname] = []
+                  groups[classname].append((name, status, f"{time_taken:.3f}s", err_msg))
+
+              for group_name, tests in groups.items():
+                  short_name = group_name.split(".")[-1]
+                  f.write(f"## {short_name}\n\n")
+                  f.write("| Test | Status | Duration | Error |\n")
+                  f.write("|------|--------|----------|-------|\n")
+                  for name, status, dur, err in tests:
+                      err_clean = err.replace("|", "\\|").replace("\n", " ")
+                      f.write(f"| {name} | {status} | {dur} | {err_clean} |\n")
+                  f.write("\n")
+          PYEOF
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-report
+          path: test-report.html
+          retention-days: 14
 
       - name: Upload test results
         if: always()
