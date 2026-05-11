@@ -50,6 +50,7 @@ jobs:
         id: run-tests
         continue-on-error: true
         run: |
+          set -o pipefail
           python -m pytest tests/e2e/ -m e2e -v \
             --tb=short \
             --junitxml=test-results.xml \
