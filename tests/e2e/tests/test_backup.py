@@ -1,7 +1,7 @@
 """
 Backup behavior tests.
 
-Validates that auto-fix operations create backups of modified files.
+Validates that auto fix operations create backups of modified files.
 """
 import os.path as osp
 
