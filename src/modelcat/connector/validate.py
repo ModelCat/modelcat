@@ -742,10 +742,18 @@ class DatasetValidator:
     def check_for_duplicate_images(self, coco_path: str):
         hashes = dict()
         duplicate_count = 0
-        with open(coco_path) as file:
-            coco = json.load(file)
+        try:
+            with open(coco_path) as file:
+                coco = json.load(file)
+            _ = coco["images"]
+        except Exception:
+            # Missing/malformed COCO file — the clean error is produced by validate_coco_file/param_check.
+            return []
 
         for img in coco["images"]:
+            if "file_name" not in img or "id" not in img:
+                # Param errors are reported by validate_coco_file/param_check; skip duplicate detection for this entry.
+                continue
             path = osp.join(self.image_dir, img["file_name"])
             if osp.isfile(path):
                 with open(path, "rb") as file:
@@ -1010,9 +1018,13 @@ class DatasetValidator:
         split_names: str,
     ):
         split_messages = []
-        with open(dataset_infos_path, "r") as f:
-            dataset_infos_json: dict = json.load(f)
-            dataset_info = dataset_infos_json[list(dataset_infos_json.keys())[0]]
+        try:
+            with open(dataset_infos_path, "r") as f:
+                dataset_infos_json: dict = json.load(f)
+                dataset_info = dataset_infos_json[list(dataset_infos_json.keys())[0]]
+        except Exception:
+            # dataset_infos.json is missing or malformed.
+            return split_messages
 
         for split_name in split_names:
             try:
@@ -1381,7 +1393,11 @@ def _count_imgs_in_coco_dataset(ann_dir: str, ann_file_names: List[str]) -> int:
     for ann_name in ann_file_names:
         ann_path = osp.join(ann_dir, ann_name)
         if osp.exists(ann_path):
-            coco = COCO(ann_path)
+            try:
+                coco = COCO(ann_path)
+            except Exception:
+                # Malformed COCO file.
+                continue
             img_ids = coco.getImgIds()
             count += len(img_ids)
     return count
@@ -1402,9 +1418,15 @@ def _calculate_coco_dataset_size(img_dir: str, ann_dir: str, ann_file_names: Lis
     for ann_name in ann_file_names:
         ann_path = osp.join(ann_dir, ann_name)
         if osp.exists(ann_path):
-            coco = COCO(ann_path)
-            imgs = coco.loadImgs(coco.getImgIds())
+            try:
+                coco = COCO(ann_path)
+                imgs = coco.loadImgs(coco.getImgIds())
+            except Exception:
+                # Malformed COCO file.
+                continue
             for img in imgs:
+                if "file_name" not in img:
+                    continue
                 img_path = osp.join(img_dir, img["file_name"])
                 if osp.exists(img_path):
                     size += osp.getsize(img_path)

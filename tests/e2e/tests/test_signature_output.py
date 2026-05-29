@@ -30,7 +30,7 @@ class TestSignatureAndOutput:
 
     def test_log_file_created(self, cli, classification_ds):
         """J3: Validation should create dataset_validator_log.txt with details."""
-        result = cli.validate(classification_ds.path)
+        cli.validate(classification_ds.path)
         log_path = osp.join(classification_ds.path, "dataset_validator_log.txt")
         assert osp.exists(log_path)
 
