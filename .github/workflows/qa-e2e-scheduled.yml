@@ -1,4 +1,4 @@
-# Scheduled (and manual) run of E2E dataset validation tests.
+# E2E dataset validation tests: on every merge to main, every Monday, or manual dispatch.
 #
 # No secrets required — these tests run entirely offline against sample datasets.
 #
@@ -9,10 +9,11 @@ name: QA ModelCat Connector E2E scheduled
 
 on:
   push:
-  pull_request:
+    branches:
+      - main
   workflow_dispatch:
   schedule:
-    - cron: '47 12 * * *'   # 12:47 UTC daily (30 min after Playwright run)
+    - cron: '47 12 * * 1'   # Monday 12:47 UTC
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
@@ -205,13 +206,13 @@ jobs:
               "attachments": [
                 {
                   "color": "${{ needs.tests.outputs.message_color }}",
-                  "fallback": "QA ModelCat Connector – Daily Automated Tests: ${{ needs.tests.outputs.message_status }}",
+                  "fallback": "QA ModelCat Connector – Automated Tests: ${{ needs.tests.outputs.message_status }}",
                   "blocks": [
                     {
                       "type": "section",
                       "text": {
                         "type": "mrkdwn",
-                        "text": "*QA ModelCat Connector – Daily Automated Tests*"
+                        "text": "*QA ModelCat Connector – Automated Tests*"
                       }
                     },
                     {
