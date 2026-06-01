@@ -1,0 +1,266 @@
+# E2E dataset validation tests: on every merge to main, every Monday, or manual dispatch.
+#
+# No secrets required — these tests run entirely offline against sample datasets.
+#
+# Optional (Slack): QA_SLACK_BOT_TOKEN = Bot User OAuth Token (starts with xoxb-).
+#   Create at api.slack.com/apps → Your App → OAuth & Permissions → Bot User OAuth Token.
+#   Scopes: chat:write, chat:write.public. Invite the bot to channel C0AMK1P30HE (or it must have chat:write.public).
+name: QA ModelCat Connector E2E scheduled
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: '47 12 * * 1'   # Monday 12:47 UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
+
+env:
+  QA_SLACK_CHANNEL_ID: 'C0AMK1P30HE'
+
+jobs:
+  tests:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    outputs:
+      total: ${{ steps.summary.outputs.total }}
+      passed: ${{ steps.summary.outputs.passed }}
+      failed: ${{ steps.summary.outputs.failed }}
+      skipped: ${{ steps.summary.outputs.skipped }}
+      slack_message: ${{ steps.summary.outputs.slack_message }}
+      message_color: ${{ steps.summary.outputs.message_color }}
+      message_status: ${{ steps.summary.outputs.message_status }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install package and test dependencies
+        run: |
+          pip install -e .
+          pip install pytest pytest-html
+
+      - name: Run E2E tests
+        id: run-tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest tests/e2e/ -m e2e -v \
+            --tb=short \
+            --junitxml=test-results.xml \
+            --html=test-report.html --self-contained-html \
+            --no-header \
+            2>&1 | tee test-output.txt
+
+      - name: Parse results and build summary
+        id: summary
+        run: |
+          LAST_LINE=$(grep -E '=.*(passed|failed|error)' test-output.txt | tail -1)
+
+          PASSED=$(echo "$LAST_LINE" | grep -oP '\d+(?= passed)' || echo "0")
+          FAILED=$(echo "$LAST_LINE" | grep -oP '\d+(?= failed)' || echo "0")
+          ERRORS=$(echo "$LAST_LINE" | grep -oP '\d+(?= error)' || echo "0")
+          SKIPPED=$(echo "$LAST_LINE" | grep -oP '\d+(?= skipped)' || echo "0")
+          FAILED=$((FAILED + ERRORS))
+          TOTAL=$((PASSED + FAILED + SKIPPED))
+
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+
+          if [ "${{ steps.run-tests.outcome }}" == "success" ]; then
+            echo "message_color=good" >> $GITHUB_OUTPUT
+            echo "message_status=success" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.run-tests.outcome }}" == "failure" ]; then
+            echo "message_color=danger" >> $GITHUB_OUTPUT
+            echo "message_status=failure" >> $GITHUB_OUTPUT
+          else
+            echo "message_color=warning" >> $GITHUB_OUTPUT
+            echo "message_status=cancelled" >> $GITHUB_OUTPUT
+          fi
+
+          SLACK_MSG=":bar_chart: *Total Tests: ${TOTAL}*\n"
+          SLACK_MSG="${SLACK_MSG}:white_check_mark: Passed: ${PASSED}\n"
+          SLACK_MSG="${SLACK_MSG}:x: Failed: ${FAILED}\n"
+          SLACK_MSG="${SLACK_MSG}:fast_forward: Skipped: ${SKIPPED}"
+
+          echo "slack_message=${SLACK_MSG}" >> $GITHUB_OUTPUT
+
+      - name: Generate GitHub Actions summary
+        if: always()
+        run: |
+          python - <<'PYEOF'
+          import xml.etree.ElementTree as ET
+
+          tree = ET.parse("test-results.xml")
+          root = tree.getroot()
+
+          suite = root.find("testsuite") if root.tag != "testsuite" else root
+          total = int(suite.get("tests", 0))
+          failures = int(suite.get("failures", 0))
+          errors = int(suite.get("errors", 0))
+          skipped = int(suite.get("skipped", 0))
+          passed = total - failures - errors - skipped
+          duration = float(suite.get("time", 0))
+
+          with open("$GITHUB_STEP_SUMMARY", "a") as f:
+              f.write("# Test results\n\n")
+              f.write(f"Total tests: {total} - Passed: {passed} - Failed: {failures + errors} - Skipped: {skipped}\n\n")
+
+              groups = {}
+              for tc in suite.iter("testcase"):
+                  classname = tc.get("classname", "Unknown")
+                  name = tc.get("name", "Unknown")
+                  time_taken = float(tc.get("time", 0))
+
+                  failure = tc.find("failure")
+                  skip = tc.find("skipped")
+                  error = tc.find("error")
+
+                  if failure is not None:
+                      status = "\u274c Fail"
+                      err_msg = (failure.get("message", "") or "")[:80]
+                  elif error is not None:
+                      status = "\u274c Error"
+                      err_msg = (error.get("message", "") or "")[:80]
+                  elif skip is not None:
+                      status = "\u23ed\ufe0f Skipped"
+                      err_msg = ""
+                  else:
+                      status = "\u2705 Pass"
+                      err_msg = ""
+
+                  if classname not in groups:
+                      groups[classname] = []
+                  groups[classname].append((name, status, f"{time_taken:.3f}s", err_msg))
+
+              for group_name, tests in groups.items():
+                  short_name = group_name.split(".")[-1]
+                  f.write(f"## {short_name}\n\n")
+                  f.write("| Test | Status | Duration | Error |\n")
+                  f.write("|------|--------|----------|-------|\n")
+                  for name, status, dur, err in tests:
+                      err_clean = err.replace("|", "\\|").replace("\n", " ")
+                      f.write(f"| {name} | {status} | {dur} | {err_clean} |\n")
+                  f.write("\n")
+          PYEOF
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-report
+          path: test-report.html
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test-results.xml
+            test-output.txt
+          retention-days: 14
+
+      - name: Fail job if tests failed
+        if: steps.run-tests.outcome == 'failure'
+        run: exit 1
+
+  notify-slack:
+    runs-on: ubuntu-22.04
+    if: always()
+    needs: [tests]
+    env:
+      QA_SLACK_CHANNEL_ID: 'C0AMK1P30HE'
+    steps:
+      - name: Set status emoji
+        id: status
+        run: |
+          if [ "${{ needs.tests.outputs.message_status }}" == "success" ]; then
+            echo "emoji=:white_check_mark:" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.tests.outputs.message_status }}" == "failure" ]; then
+            echo "emoji=:x:" >> $GITHUB_OUTPUT
+          else
+            echo "emoji=:octagonal_sign:" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.24.0
+        continue-on-error: true
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.QA_SLACK_BOT_TOKEN }}
+        with:
+          channel-id: ${{ env.QA_SLACK_CHANNEL_ID }}
+          payload: |
+            {
+              "text": "${{ steps.status.outputs.emoji }} Connector E2E Test Results",
+              "attachments": [
+                {
+                  "color": "${{ needs.tests.outputs.message_color }}",
+                  "fallback": "QA ModelCat Connector – Automated Tests: ${{ needs.tests.outputs.message_status }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*QA ModelCat Connector – Automated Tests*"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "${{ needs.tests.outputs.slack_message }}"
+                      }
+                    },
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Status*\n${{ needs.tests.outputs.message_status }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Triggered by*\n${{ github.triggering_actor }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Trigger*\n${{ github.event_name }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Branch*\n`${{ github.ref_name }}`"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "actions",
+                      "elements": [
+                        {
+                          "type": "button",
+                          "text": {
+                            "type": "plain_text",
+                            "text": ":mag: View Pipeline",
+                            "emoji": true
+                          },
+                          "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
