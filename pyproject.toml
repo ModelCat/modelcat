@@ -147,6 +147,7 @@ test = ["coverage"]
 modelcat_validate  = "modelcat.connector.validate:validate_cli"
 modelcat_upload    = "modelcat.connector.upload:upload_cli"
 modelcat_setup     = "modelcat.connector.setup:setup_cli"
+modelcat_fetch     = "modelcat.connector.fetch:fetch_cli"
 
 # This is configuration specific to the `setuptools` build backend.
 # If you are using a different build backend, you will need to change this.
