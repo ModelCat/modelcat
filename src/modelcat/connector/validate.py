@@ -463,6 +463,8 @@ class DatasetValidator:
                     osp.join(self.ann_dir, ann_file), split_name, label_names
                 )
 
+        messages += self.check_empty_splits(ann_file_names, split_names)
+
         for ann_file in ann_file_names:
             messages += self.check_for_duplicate_images(
                 osp.join(self.ann_dir, ann_file)
@@ -942,6 +944,45 @@ class DatasetValidator:
                     ),
                 }
             )
+        return messages
+
+    def check_empty_splits(
+        self,
+        ann_file_names: List[str],
+        split_names: List[str],
+    ) -> List[Dict[str, str]]:
+        """
+        Validate that no declared split is empty. A split that contains no images
+        cannot be used for training or evaluation, so an empty split is treated as
+        an error.
+
+        Only splits whose annotation file is present and parseable with a valid
+        (but empty) "images" list are flagged here; missing/malformed files and a
+        missing "images" section are reported by validate_coco_file/param_check.
+
+        Returns a list of message dicts (type/message).
+        """
+        messages: List[Dict[str, str]] = []
+        for ann_file, split_name in zip(ann_file_names, split_names):
+            ann_path = osp.join(self.ann_dir, ann_file)
+            try:
+                with open(ann_path, "r") as f:
+                    coco = json.load(f)
+            except Exception:
+                # Missing/malformed COCO file — reported by validate_coco_file/param_check.
+                continue
+
+            images = coco.get("images")
+            if isinstance(images, list) and len(images) == 0:
+                messages.append(
+                    {
+                        "type": "error",
+                        "message": (
+                            f'The "{split_name}" split (annotation file "{ann_file}") is empty: '
+                            f"it contains no images. Every split must contain at least one image."
+                        ),
+                    }
+                )
         return messages
 
     def autofill_img_dim(self, img):
