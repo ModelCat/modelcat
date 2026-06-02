@@ -131,6 +131,10 @@ class DatasetBuilder:
         mut.corrupt_json(self.ann_file_path(ann_filename))
         return self
 
+    def empty_split(self, ann_filename: str) -> "DatasetBuilder":
+        mut.empty_split(self.ann_file_path(ann_filename))
+        return self
+
     def add_duplicate_image_entry(self, ann_filename: str) -> "DatasetBuilder":
         mut.add_duplicate_image_entry(self.ann_file_path(ann_filename))
         return self
