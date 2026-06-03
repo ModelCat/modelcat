@@ -412,7 +412,7 @@ NOTE: category id should match the order in which the category names are listed 
 
 Example split file for object detection task (`coco_test.json`)
 
-For object detection the file format is the same as for classification, with an addition of non-empty bbox key in the annotations. Bounding box coordinates are given in pixels in centroid format [x, y, width, height] where x and y denote the center of the bounding box.
+For object detection the file format is the same as for classification, with an addition of non-empty bbox key in the annotations. Bounding box coordinates are given in pixels in COCO format [x, y, width, height] where x and y denote the top-left corner of the bounding box.
 
 ```json
 {
