@@ -76,7 +76,6 @@ def get_api_key():
 
 def clean_supercategories(base_dir):
     """Removes supercategories and empty classes."""
-    # Catch both 'valid' and 'val' names
     splits = ["train", "valid", "val", "test"]
     anns_by_split = {}
     for split in splits:
@@ -147,13 +146,12 @@ def clean_supercategories(base_dir):
 
 
 def format_for_modelcat(rf_dir, dest_dir, project_name):
-    """Restructures Roboflow export to ModelCat standard."""
+    """Restructures export to ModelCat standard."""
     log.info("Converting dataset to ModelCat format...")
     os.makedirs(dest_dir, exist_ok=True)
     os.makedirs(os.path.join(dest_dir, "annotations"), exist_ok=True)
     os.makedirs(os.path.join(dest_dir, "images"), exist_ok=True)
 
-    # Map all Roboflow variations to ModelCat splits
     rf_splits = {
         "train": "train",
         "valid": "validation",
@@ -198,7 +196,7 @@ def format_for_modelcat(rf_dir, dest_dir, project_name):
 
 
 def generate_dataset_infos(dest_dir, project_name, rf_license, task_type="detection"):
-    """Generates the metadata JSON required by ModelCat."""
+    """Generates the metadata JSON required by ModelCat with dynamic personalized descriptions."""
     license_name = rf_license.get("name", "Unknown") if rf_license else "Unknown"
 
     if license_name and any(
@@ -221,6 +219,28 @@ def generate_dataset_infos(dest_dir, project_name, rf_license, task_type="detect
                     )
                 ]
                 break
+
+    # --- NEW: PERSISTENT AND PERSONALIZED DESCRIPTION ENGINE ---
+    # Convert "forklift-bounding-box" into "Forklift Bounding Box"
+    clean_project_name = project_name.replace("-", " ").replace("_", " ").title()
+    clean_task_type = task_type.replace("-", " ").lower()
+
+    # Generate a breakdown of class targets for explicit dataset profiling
+    if class_names:
+        if len(class_names) <= 5:
+            classes_snippet = ", ".join(class_names)
+        else:
+            classes_snippet = ", ".join(class_names[:5]) + f", and {len(class_names) - 5} other unique categories"
+        target_details = f" Dynamically profiles and indexes instances of: {classes_snippet}."
+    else:
+        target_details = ""
+
+    personalized_description = (
+        f"A localized computer vision dataset containing high-fidelity imagery curated for '{clean_project_name}' "
+        f"applications. Structured explicitly for {clean_task_type} tasks.{target_details} "
+        f"Standardized via the ModelCat Fetch Engine. License: {license_name}."
+    )
+    # -----------------------------------------------------------
 
     splits = {}
     total_imgs, total_bytes = 0, 0
@@ -270,7 +290,7 @@ def generate_dataset_infos(dest_dir, project_name, rf_license, task_type="detect
 
     dataset_infos = {
         project_name: {
-            "description": f"Roboflow dataset fetched via modelcat_fetch. License: {license_name}",
+            "description": personalized_description, # <--- Injected personalized description string here!
             "license": str(rf_license) if rf_license else "",
             "builder_name": project_name,
             "config_name": project_name,
@@ -294,12 +314,12 @@ def generate_dataset_infos(dest_dir, project_name, rf_license, task_type="detect
 
 def fetch_cli():
     parser = argparse.ArgumentParser(
-        description="Fetch and format datasets from Roboflow Universe to ModelCat."
+        description="Fetch and format datasets from source to ModelCat."
     )
     parser.add_argument(
         "save_path", help="Local directory to save the ModelCat dataset."
     )
-    parser.add_argument("--url", required=True, help="Roboflow Universe URL")
+    parser.add_argument("--url", required=True, help="Universe target URL")
     args = parser.parse_args()
 
     ensure_dependencies()
@@ -357,7 +377,7 @@ def fetch_cli():
         mc_task_type = task_mapping[rf_type]
 
     except Exception as e:
-        log.error(f"Failed to fetch project metadata from Roboflow. Details: {e}")
+        log.error(f"Failed to fetch project metadata. Details: {e}")
         sys.exit(1)
 
     log.info(
@@ -386,13 +406,7 @@ def fetch_cli():
         )
         if total_images_found == 0:
             log.error(
-                f"CRITICAL: The downloaded Roboflow dataset (v{version_num}) contains 0 images."
-            )
-            log.error(
-                "PROPOSED FIX: This often happens on Roboflow when a version is generated before images are uploaded."
-            )
-            log.error(
-                "Please verify the project on Roboflow Universe and append the correct version to your URL."
+                f"CRITICAL: The downloaded dataset (v{version_num}) contains 0 images."
             )
             shutil.rmtree(dest_dir)
             sys.exit(1)
