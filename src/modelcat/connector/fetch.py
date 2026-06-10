@@ -230,8 +230,13 @@ def generate_dataset_infos(dest_dir, project_name, rf_license, task_type="detect
         if len(class_names) <= 5:
             classes_snippet = ", ".join(class_names)
         else:
-            classes_snippet = ", ".join(class_names[:5]) + f", and {len(class_names) - 5} other unique categories"
-        target_details = f" Dynamically profiles and indexes instances of: {classes_snippet}."
+            classes_snippet = (
+                ", ".join(class_names[:5])
+                + f", and {len(class_names) - 5} other unique categories"
+            )
+        target_details = (
+            f" Dynamically profiles and indexes instances of: {classes_snippet}."
+        )
     else:
         target_details = ""
 
@@ -290,7 +295,7 @@ def generate_dataset_infos(dest_dir, project_name, rf_license, task_type="detect
 
     dataset_infos = {
         project_name: {
-            "description": personalized_description, # <--- Injected personalized description string here!
+            "description": personalized_description,  # <--- Injected personalized description string here!
             "license": str(rf_license) if rf_license else "",
             "builder_name": project_name,
             "config_name": project_name,
