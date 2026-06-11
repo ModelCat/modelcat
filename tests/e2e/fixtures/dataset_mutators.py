@@ -87,6 +87,14 @@ def remove_coco_section(ann_path: str, section: str) -> None:
     save_json(ann_path, data)
 
 
+def empty_split(ann_path: str) -> None:
+    """Empty a split by clearing its images and annotations (categories kept)."""
+    data = load_json(ann_path)
+    data["images"] = []
+    data["annotations"] = []
+    save_json(ann_path, data)
+
+
 def remove_coco_annotation_field(
     ann_path: str, field_name: str, annotation_index: int = 0
 ) -> None:
