@@ -296,6 +296,36 @@ Example below shows `dataset_infos.json` definition for keypoints detection task
 }
 ```
 
+## Unlabeled Datasets
+
+ModelCat also supports uploading datasets without any annotations. These are referred to as **unlabeled datasets**. Unlabeled datasets skip the Dataset Analysis step upon upload and **cannot be used for Model Build**.
+
+To configure your dataset as unlabeled, you must explicitly include `"unlabeled": true` in your `dataset_infos.json` and set both `"task_templates"` and `"splits"` to `null`. The `annotations/` directory is not required for unlabeled datasets.
+
+Example `dataset_infos.json` for an unlabeled dataset:
+```json
+{
+    "unlabeled_sample": {
+        "unlabeled": true, // Must explicitly be set to true
+        "description": "An example of an unlabeled dataset without annotations.",
+        "citation": "",
+        "homepage": "https://app.modelcat.ai/",
+        "license": "",
+        "task_templates": null, // Must explicitly be set to null
+        "splits": null, // Must explicitly be set to null
+        "builder_name": "unlabeled_sample",
+        "config_name": "unlabeled_sample",
+        "version": {
+            "version_str": "1.0.0",
+            "description": null,
+            "major": 1,
+            "minor": 0,
+            "patch": 0
+        }
+    }
+}
+```
+
 # Annotation files
 ModelCat requires split files (train, validation and test) to be placed under the `/annotations` directory. Currently ModelCat supports the **COCO JSON** format, which means that split files will also contain annotations. To avoid mistakes it is suggested to use the following naming scheme for your split files: `coco_train.json`, `coco_validation.json` and `coco_test.json` for train, validation and test respectively as referenced in the example dataset metafile. Each annotation contains an image path, relative to the `images/` directory
 
