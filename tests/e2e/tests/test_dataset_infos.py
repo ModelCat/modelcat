@@ -123,6 +123,25 @@ class TestDatasetInfosContent:
         assert result.has_error("validation error") or result.has_error("task_templates")
         assert not result.passed
 
+    def test_unlabeled_dataset_explicit_nulls(self, cli, classification_ds):
+        """C15: dataset with unlabeled=True and task_templates=null, splits=null passes."""
+        classification_ds.remove_dir("annotations")
+        classification_ds.set_infos_value("unlabeled", True)
+        classification_ds.set_infos_value("task_templates", None)
+        classification_ds.set_infos_value("splits", None)
+        
+        result = cli.validate(classification_ds.path)
+        assert result.passed
+
+    def test_missing_templates_and_splits_fails(self, cli, classification_ds):
+        """C16: Missing annotations completely aborts validation."""
+        classification_ds.remove_infos_key("splits")
+        classification_ds.remove_infos_key("task_templates")
+        classification_ds.remove_dir("annotations")
+        result = cli.validate(classification_ds.path)
+        assert not result.passed
+        assert result.has_error("splits") or result.has_error("task_templates")
+
 
 @pytest.mark.e2e
 class TestSizeAndCountMetadata:

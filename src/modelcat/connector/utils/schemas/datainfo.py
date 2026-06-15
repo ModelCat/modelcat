@@ -286,8 +286,9 @@ class DatasetInfo(BaseModel):
     assumptions about what exists without defensive checks everywhere.
     """
 
-    task_templates: List[TaskTemplate]
-    splits: Dict[str, SplitInfo]
+    unlabeled: bool = False
+    task_templates: Optional[List[TaskTemplate]]
+    splits: Optional[Dict[str, SplitInfo]]
     description: str = ""
     citation: str = ""
     homepage: str = ""
@@ -303,24 +304,30 @@ class DatasetInfo(BaseModel):
     dataset_size: Optional[int] = None
     size_in_bytes: Optional[int] = None
 
-    @validator("task_templates")
-    def check_min_length(cls, v):
+    @validator("task_templates", always=True)
+    def check_min_length(cls, v, values):
         """
-        Require exactly one task template.
+        Require exactly one task template if dataset is not unlabeled.
+        Require None if dataset is unlabeled.
 
         Rationale
         ---------
         Many pipelines assume a single supervised task per dataset/config.
         If you need multiple templates, consider multiple dataset configs.
         """
-        if len(v) != 1:
-            raise ValueError("task_templates must contain exactly one element")
+        if values.get("unlabeled"):
+            if v is not None:
+                raise ValueError("task_templates must be null for unlabeled datasets")
+            return v
+        if v is None or len(v) != 1:
+            raise ValueError("task_templates must contain exactly one element for labeled datasets")
         return v
 
     @root_validator
     def _require_three_splits(cls, values):
         """
-        Ensure canonical split keys exist: "train", "validation", and "test".
+        Ensure canonical split keys exist: "train", "validation", and "test" for labeled datasets.
+        Ensure splits is None for unlabeled datasets.
 
         Behavior
         --------
@@ -333,6 +340,11 @@ class DatasetInfo(BaseModel):
         removed in production if verbose logs are undesirable.
         """
         splits = values.get("splits")
+
+        if values.get("unlabeled"):
+            if splits is not None:
+                raise ValueError("splits must be null for unlabeled datasets")
+            return values
 
         if not isinstance(splits, dict) or not splits:
             raise ValueError(

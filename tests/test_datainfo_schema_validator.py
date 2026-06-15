@@ -185,6 +185,37 @@ class TestSplitsWithDicts(unittest.TestCase):
             DatasetInfo.parse_obj(payload)
         self.assertIn("splits must include", str(ctx.exception))
 
+    def test_unlabeled_dataset_valid(self):
+        payload = {
+            "unlabeled": True,
+            "task_templates": None,
+            "splits": None,
+            "description": "An unlabeled dataset without annotations",
+        }
+        di = DatasetInfo.parse_obj(payload)
+        self.assertTrue(di.unlabeled)
+        self.assertIsNone(di.task_templates)
+        self.assertIsNone(di.splits)
+
+    def test_unlabeled_dataset_rejects_non_null_fields(self):
+        payload_with_templates = {
+            "unlabeled": True,
+            "task_templates": [{"task": "classification", "labels": ["cat"]}],
+            "splits": None,
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            DatasetInfo.parse_obj(payload_with_templates)
+        self.assertIn("task_templates must be null for unlabeled datasets", str(ctx.exception))
+
+        payload_with_splits = {
+            "unlabeled": True,
+            "task_templates": None,
+            "splits": minimal_splits_dict(),
+        }
+        with self.assertRaises(ValidationError) as ctx2:
+            DatasetInfo.parse_obj(payload_with_splits)
+        self.assertIn("splits must be null for unlabeled datasets", str(ctx2.exception))
+
     def test_splits_must_be_mapping(self):
         payload = {
             "task_templates": [{"task": "classification", "labels": ["x"]}],

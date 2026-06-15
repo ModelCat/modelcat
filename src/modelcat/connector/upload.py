@@ -302,16 +302,20 @@ class DatasetUploader:
                 )
                 ds_uuid = old_ds_uuid
 
-            print("Running Dataset Analysis immediately after registration...")
-            da_data = self.api_client.submit_dataset_analysis(
-                dataset_uri=self.s3_uri,
-                group_id=self.group_id,
-                dataset_name=self.dataset_name,
-            )
-            print(
-                f"The dataset will be fully usable after the Dataset Analysis completes."
-                f"\nFollow the progress by visiting {PRODUCT_URL}{da_data['results_url']}"
-            )
+            is_unlabeled = self.dataset_infos[self.dataset_name].get("unlabeled", False)
+            if not is_unlabeled:
+                print("Running Dataset Analysis immediately after registration...")
+                da_data = self.api_client.submit_dataset_analysis(
+                    dataset_uri=self.s3_uri,
+                    group_id=self.group_id,
+                    dataset_name=self.dataset_name,
+                )
+                print(
+                    f"The dataset will be fully usable after the Dataset Analysis completes."
+                    f"\nFollow the progress by visiting {PRODUCT_URL}{da_data['results_url']}"
+                )
+            else:
+                print("Skipping Dataset Analysis as the dataset is marked as unlabeled.")
             print("-" * 100)
             print(
                 f"Dataset uploaded with uuid '{ds_uuid}'. You can view your dataset at: "
