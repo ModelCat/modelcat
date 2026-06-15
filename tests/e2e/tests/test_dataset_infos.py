@@ -129,7 +129,7 @@ class TestDatasetInfosContent:
         classification_ds.set_infos_value("unlabeled", True)
         classification_ds.set_infos_value("task_templates", None)
         classification_ds.set_infos_value("splits", None)
-        
+
         result = cli.validate(classification_ds.path)
         assert result.passed
 
