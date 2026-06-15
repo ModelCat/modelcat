@@ -44,6 +44,7 @@ Currently the following functions are supported:
 * ModelCatConnector for dataset validation and upload to ModelCat. 
 See the [modelcat.connector README](src/modelcat/connector/README.md) for details:
   * Tool setup (one-time only)
+  * Fetching external datasets (e.g., via Roboflow Universe)
   * Dataset validation
   * Dataset upload
 
