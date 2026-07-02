@@ -43,7 +43,7 @@ requires-python = ">=3.8"
 
 # The license expression specifying the license under which the package is released.
 # https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license
-license = "MIT"
+license = {file = "LICENSE"}
 
 # This field adds keywords for your project which will appear on the
 # project page. What does your project relate to?
