@@ -91,3 +91,37 @@ Uploading file: tfds/tf_test-validation.tfrecord-00000-of-00001
 ----------------------------------------------------------------------------------------------------
 Upload complete. You can view your dataset at: https://app.modelcat.ai/datasets/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXX/tf_test
 ```
+
+---
+
+## Fetching Datasets from Roboflow Universe
+
+The `modelcat_fetch` utility allows you to instantly download and format datasets from Roboflow Universe into a ModelCat-validated structure. It handles directory mapping, annotation cleaning, and metadata generation automatically.
+
+### Usage
+Run the fetch command by providing a local save destination and the target Roboflow Universe URL:
+
+```bash
+modelcat_fetch <destination_path> --url <roboflow_universe_url>
+```
+
+**Example:**
+```bash
+modelcat_fetch ./my-dataset --url [https://universe.roboflow.com/roboflow-100/pills-sxdht/dataset/2](https://universe.roboflow.com/roboflow-100/pills-sxdht/dataset/2)
+```
+
+### Authentication
+You will need a free Roboflow API key to download datasets. The CLI will automatically prompt you to enter your API key the first time you run it and will offer to save it to a `.env` file for future use. Alternatively, you can manually set the `ROBOFLOW_API_KEY` environment variable.
+
+### Key Features
+Under the hood, the fetch utility performs several automated checks to guarantee data integrity before it reaches ModelCat:
+* **Auto-Version Detection:** If no specific version number is provided in the URL, the utility will query the API to automatically select and download the latest version.
+* **Smart Split Mapping:** Automatically maps Roboflow's varying split terminologies (e.g., matching `valid` or `val` to ModelCat's `validation` requirement) and guarantees no empty split folders break validation.
+* **Metadata & Thumbnail Generation:** Extracts commercial licensing warnings, dynamically builds the `dataset_infos.json` target profiles, and generates fallback thumbnails if needed.
+* **Data Guardrails:** Safely detects and aborts on empty "shell" datasets, ensuring 0-image directories are never passed downstream.
+
+### Next Steps
+Once your dataset is successfully fetched and formatted, you can immediately validate it using the standard ModelCat pipeline:
+```bash
+modelcat_validate -d ./my-dataset
+```
