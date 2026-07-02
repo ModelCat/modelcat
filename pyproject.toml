@@ -41,9 +41,8 @@ readme = "README.md" # Optional
 # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
 requires-python = ">=3.8"
 
-# This is either text indicating the license for the distribution, or a file
-# that contains the license
-# https://packaging.python.org/en/latest/specifications/core-metadata/#license
+# The license expression specifying the license under which the package is released.
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license
 license = {file = "LICENSE"}
 
 # This field adds keywords for your project which will appear on the
@@ -83,7 +82,6 @@ classifiers = [  # Optional
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 
   # Pick your license as you wish
-  "License :: OSI Approved :: MIT License",
 
   # Specify the Python versions you support here. In particular, ensure
   # that you indicate you support Python 3. These classifiers are *not*
