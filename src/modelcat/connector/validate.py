@@ -125,10 +125,13 @@ class DatasetValidator:
                     }
                 )
 
-        dataset_info_messages, ann_file_names, split_names, label_names = (
+        dataset_info_messages, ann_file_names, split_names, label_names, is_unlabeled = (
             self.validate_dataset_infos_file(dataset_infos_path)
         )
         self.messages += dataset_info_messages
+
+        if annotations_required and is_unlabeled:
+            annotations_required = False
 
         annotations_messages = self.validate_annotations_and_images(
             annotations_required,
@@ -150,6 +153,7 @@ class DatasetValidator:
         ann_file_names = []
         split_names = []
         label_names = []
+        is_unlabeled = False
 
         if not osp.exists(dataset_infos_path):
             return (
@@ -162,6 +166,7 @@ class DatasetValidator:
                 [],
                 [],
                 [],
+                False,
             )
 
         try:
@@ -178,10 +183,13 @@ class DatasetValidator:
                 [],
                 [],
                 [],
+                False,
             )
 
         dataset_name = list(dataset_infos_json.keys())[0]
         dataset_info = dataset_infos_json[dataset_name]
+
+        is_unlabeled = dataset_info.get("unlabeled", False)
 
         for key in ["splits", "task_templates"]:
             if key not in dataset_info:
@@ -207,7 +215,7 @@ class DatasetValidator:
                         f"Auto-fix: '{key}' key added to 'dataset_infos.json' file"
                     )
 
-        if "splits" in dataset_info:
+        if dataset_info.get("splits") is not None:
             for split in ["train", "test", "validation"]:
                 if split not in dataset_info["splits"]:
                     messages.append(
@@ -227,7 +235,7 @@ class DatasetValidator:
                             }
                         )
 
-        if "task_templates" in dataset_info:
+        if dataset_info.get("task_templates") is not None:
             if len(dataset_info["task_templates"]) == 0:
                 messages.append(
                     {
@@ -410,7 +418,7 @@ class DatasetValidator:
                 }
             )
 
-        return messages, ann_file_names, split_names, label_names
+        return messages, ann_file_names, split_names, label_names, is_unlabeled
 
     def validate_annotations_and_images(
         self,
