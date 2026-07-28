@@ -131,7 +131,7 @@ class DatasetValidator:
                     }
                 )
 
-        dataset_info_messages, ann_file_names, split_names, label_names = (
+        dataset_info_messages, ann_file_names, split_names, label_names, is_unlabeled = (
             self.validate_dataset_infos_file(dataset_infos_path)
         )
         self.messages += dataset_info_messages
@@ -141,6 +141,8 @@ class DatasetValidator:
         if any(msg.get("type") == "error" for msg in dataset_info_messages):
             self.restart_analysis = False
             return self.messages, False
+        if annotations_required and is_unlabeled:
+            annotations_required = False
 
         annotations_messages = self.validate_annotations_and_images(
             annotations_required,
@@ -162,6 +164,7 @@ class DatasetValidator:
         ann_file_names = []
         split_names = []
         label_names = []
+        is_unlabeled = False
 
         if not osp.exists(dataset_infos_path):
             return (
@@ -174,6 +177,7 @@ class DatasetValidator:
                 [],
                 [],
                 [],
+                False,
             )
 
         try:
@@ -190,10 +194,13 @@ class DatasetValidator:
                 [],
                 [],
                 [],
+                False,
             )
 
         dataset_name = list(dataset_infos_json.keys())[0]
         dataset_info = dataset_infos_json[dataset_name]
+
+        is_unlabeled = dataset_info.get("unlabeled", False)
 
         for key in ["splits", "task_templates"]:
             if key not in dataset_info:
@@ -219,7 +226,7 @@ class DatasetValidator:
                         f"Auto-fix: '{key}' key added to 'dataset_infos.json' file"
                     )
 
-        if "splits" in dataset_info:
+        if dataset_info.get("splits") is not None:
             for split in ["train", "test", "validation"]:
                 if split not in dataset_info["splits"]:
                     messages.append(
@@ -239,7 +246,7 @@ class DatasetValidator:
                             }
                         )
 
-        if "task_templates" in dataset_info:
+        if dataset_info.get("task_templates") is not None:
             if len(dataset_info["task_templates"]) == 0:
                 messages.append(
                     {
@@ -422,7 +429,7 @@ class DatasetValidator:
                 }
             )
 
-        return messages, ann_file_names, split_names, label_names
+        return messages, ann_file_names, split_names, label_names, is_unlabeled
 
     def validate_annotations_and_images(
         self,
@@ -540,14 +547,12 @@ class DatasetValidator:
             missing_images = []
             imgs_without_anns = []
 
+            ann_counts = Counter(ann["image_id"] for ann in coco["annotations"])
             for img in coco["images"]:
                 img_path = osp.join(self.image_dir, img["file_name"])
                 if not osp.exists(img_path):
                     missing_images.append(img["file_name"])
-                anns_for_img = [
-                    ann for ann in coco["annotations"] if ann["image_id"] == img["id"]
-                ]
-                if len(anns_for_img) == 0:
+                if ann_counts.get(img["id"], 0) == 0:
                     imgs_without_anns.append(img["file_name"])
 
             if len(missing_images) > 0:
@@ -587,12 +592,11 @@ class DatasetValidator:
                         if image["file_name"] not in imgs_without_anns
                     ]
                     self.reload_coco(coco_file_path, coco)
+                    ann_counts = Counter(ann["image_id"] for ann in coco["annotations"])
                     imgs_without_anns = [
                         img["file_name"]
                         for img in coco["images"]
-                        if not any(
-                            ann["image_id"] == img["id"] for ann in coco["annotations"]
-                        )
+                        if ann_counts.get(img["id"], 0) == 0
                     ]
                     if len(imgs_without_anns) > 0:
                         raise Exception(

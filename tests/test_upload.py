@@ -447,6 +447,59 @@ class TestDatasetUploader(unittest.TestCase):
         )
         mock_client_instance.submit_dataset_analysis.assert_called_once()
 
+    @patch("modelcat.connector.upload.run_cli_command")
+    @patch("modelcat.connector.upload.ProductAPIClient")
+    @patch("modelcat.connector.upload.DatasetUploader.dataset_check", return_value=True)
+    @patch(
+        "modelcat.connector.upload.DatasetUploader.obtain_s3_access", return_value=None
+    )
+    @patch("modelcat.connector.upload.check_aws_configuration", return_value=True)
+    @patch("modelcat.connector.upload.osp.exists", return_value=True)
+    @patch("modelcat.connector.upload.check_s3_access")
+    @patch(
+        "modelcat.connector.upload.DatasetUploader._count_files",
+        return_value=(10, 1000),
+    )
+    def test_upload_s3_unlabeled_skips_analysis(
+        self,
+        mock_count_files,
+        mock_check_s3_access,
+        mock_exists,
+        mock_check_aws_config,
+        mock_obtain_s3_access,
+        mock_dataset_check,
+        mock_api_client,
+        mock_run_cli,
+    ):
+        """Test successful S3 upload for unlabeled datasets skips submit_dataset_analysis."""
+        # Mock dependencies
+        mock_client_instance = MagicMock()
+        mock_client_instance.register_dataset.return_value = {"uuid": "test-uuid"}
+        mock_api_client.return_value = mock_client_instance
+
+        unlabeled_dataset_infos = dict(self.mock_dataset_infos)
+        unlabeled_dataset_infos["test_dataset"]["unlabeled"] = True
+
+        dataset_infos_mock = mock_open(read_data=json.dumps(unlabeled_dataset_infos))
+
+        # Apply the mock with side_effect
+        with patch("builtins.open", return_value=dataset_infos_mock()):
+            uploader = DatasetUploader(
+                dataset_root_dir=self.dataset_root,
+                working_dir=self.dataset_root,
+                group_id=self.group_id,
+                oauth_token=self.oauth_token,
+            )
+            uploader.validate()
+            uploader.upload_s3()
+
+        mock_run_cli.assert_called_once()
+        mock_api_client.assert_called_once()
+        mock_client_instance.register_dataset.assert_called_once_with(
+            name="test_dataset", s3_uri=ANY, dataset_infos=unlabeled_dataset_infos
+        )
+        mock_client_instance.submit_dataset_analysis.assert_not_called()
+
     @patch("modelcat.connector.upload.argparse.ArgumentParser.parse_args")
     @patch("modelcat.connector.utils.common.resolve_version", return_value="1.0.0")
     @patch("modelcat.connector.upload.osp.join")
