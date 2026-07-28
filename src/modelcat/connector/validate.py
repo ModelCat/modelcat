@@ -55,7 +55,13 @@ class DatasetValidator:
         else:
             self.log_filepath = None
 
-    def create_thumbnail(self, image_path: str, thumbnail_path: str, max_width: int = 260, quality: int = 70):
+    def create_thumbnail(
+        self,
+        image_path: str,
+        thumbnail_path: str,
+        max_width: int = 260,
+        quality: int = 70,
+    ):
         """Creates optimized thumbnail for the dataset"""
         return create_thumbnail(image_path, thumbnail_path, max_width, quality)
 
@@ -130,6 +136,11 @@ class DatasetValidator:
         )
         self.messages += dataset_info_messages
 
+        # If any errors occur (like a corrupted dataset_infos.json), stop validation immediately to
+        # prevent cascading crashes.
+        if any(msg.get("type") == "error" for msg in dataset_info_messages):
+            self.restart_analysis = False
+            return self.messages, False
         if annotations_required and is_unlabeled:
             annotations_required = False
 
@@ -498,7 +509,9 @@ class DatasetValidator:
         )
         return messages
 
-    def validate_coco_file(self, coco_file_path: str, split_name: str, label_names: List[str]):
+    def validate_coco_file(
+        self, coco_file_path: str, split_name: str, label_names: List[str]
+    ):
         messages = []
         coco_file_name = osp.basename(coco_file_path)
 
@@ -712,7 +725,11 @@ class DatasetValidator:
         annotations = coco.get("annotations", [])
 
         category_ids = [cat.get("id") for cat in categories if "id" in cat]
-        cat_id_to_name = {cat["id"]: cat.get("name", str(cat["id"])) for cat in categories if "id" in cat}
+        cat_id_to_name = {
+            cat["id"]: cat.get("name", str(cat["id"]))
+            for cat in categories
+            if "id" in cat
+        }
 
         # only count annotations that reference valid categories (avoid noise if file is malformed)
         valid_category_ids = set(category_ids)
@@ -728,7 +745,9 @@ class DatasetValidator:
         if not missing_cat_ids:
             return messages
 
-        missing_cat_names = [cat_id_to_name.get(cid, str(cid)) for cid in missing_cat_ids]
+        missing_cat_names = [
+            cat_id_to_name.get(cid, str(cid)) for cid in missing_cat_ids
+        ]
 
         if split_name.lower() == "train":
             message_type = "error"
@@ -937,9 +956,7 @@ class DatasetValidator:
             missing = split_used - train_used
             if not missing:
                 continue
-            missing_named = sorted(
-                cat_id_to_name.get(cid, str(cid)) for cid in missing
-            )
+            missing_named = sorted(cat_id_to_name.get(cid, str(cid)) for cid in missing)
             messages.append(
                 {
                     "type": "error",
@@ -999,7 +1016,9 @@ class DatasetValidator:
         try:
             with Image.open(image_path) as im:
                 img["width"], img["height"] = im.size
-            log.info(f"Computed dimensions for {img['file_name']}: width={img['width']}, height={img['height']}")
+            log.info(
+                f"Computed dimensions for {img['file_name']}: width={img['width']}, height={img['height']}"
+            )
             return True
         except Exception as e:
             log.error(f"Failed to compute dimensions for {img['file_name']}: {e}")
@@ -1257,14 +1276,22 @@ class DatasetValidator:
                         needs_save = True
                     else:
                         if m_width:
-                            return self._create_param_error_message(coco_file_name, "images.width")
+                            return self._create_param_error_message(
+                                coco_file_name, "images.width"
+                            )
                         if m_height:
-                            return self._create_param_error_message(coco_file_name, "images.height")
+                            return self._create_param_error_message(
+                                coco_file_name, "images.height"
+                            )
                 else:
                     if m_width:
-                        return self._create_param_error_message(coco_file_name, "images.width")
+                        return self._create_param_error_message(
+                            coco_file_name, "images.width"
+                        )
                     if m_height:
-                        return self._create_param_error_message(coco_file_name, "images.height")
+                        return self._create_param_error_message(
+                            coco_file_name, "images.height"
+                        )
 
         # Save the updated coco dict back to the file once, after all images are processed
         if needs_save:
@@ -1358,7 +1385,9 @@ class DatasetValidator:
         _reload_coco(coco_file_path, coco_dict)
 
 
-def create_thumbnail(image_path: str, thumbnail_path: str, max_width: int = 260, quality: int = 70):
+def create_thumbnail(
+    image_path: str, thumbnail_path: str, max_width: int = 260, quality: int = 70
+):
     """
     Creates a thumbnail from an image file.
 
@@ -1374,7 +1403,9 @@ def create_thumbnail(image_path: str, thumbnail_path: str, max_width: int = 260,
     try:
         # Prefer the Resampling enum when available, fall back to legacy constants.
         _resampling_namespace = getattr(Image, "Resampling", Image)
-        RESAMPLE_LANCZOS = getattr(_resampling_namespace, "LANCZOS", getattr(Image, "LANCZOS", Image.BICUBIC))
+        RESAMPLE_LANCZOS = getattr(
+            _resampling_namespace, "LANCZOS", getattr(Image, "LANCZOS", Image.BICUBIC)
+        )
 
         with Image.open(image_path) as img:
             if img.mode != "RGB":
