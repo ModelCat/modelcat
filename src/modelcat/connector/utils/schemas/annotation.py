@@ -439,7 +439,7 @@ class CocoDataset(BaseModel):
         file_names = [im.file_name for im in images]
         if any((not isinstance(fn, str) or not fn.strip()) for fn in file_names):
             raise ValueError("All images must have a non-empty 'file_name' string.")
-        dupe_fns = [fn for fn in set(file_names) if file_names.count(fn) > 1]
+        dupe_fns = _find_dupes(file_names)
         if dupe_fns:
             raise ValueError(f"Duplicate image file_name(s): {sorted(dupe_fns)}")
 

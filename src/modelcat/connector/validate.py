@@ -526,14 +526,12 @@ class DatasetValidator:
             missing_images = []
             imgs_without_anns = []
 
+            ann_counts = Counter(ann["image_id"] for ann in coco["annotations"])
             for img in coco["images"]:
                 img_path = osp.join(self.image_dir, img["file_name"])
                 if not osp.exists(img_path):
                     missing_images.append(img["file_name"])
-                anns_for_img = [
-                    ann for ann in coco["annotations"] if ann["image_id"] == img["id"]
-                ]
-                if len(anns_for_img) == 0:
+                if ann_counts.get(img["id"], 0) == 0:
                     imgs_without_anns.append(img["file_name"])
 
             if len(missing_images) > 0:
@@ -573,12 +571,11 @@ class DatasetValidator:
                         if image["file_name"] not in imgs_without_anns
                     ]
                     self.reload_coco(coco_file_path, coco)
+                    ann_counts = Counter(ann["image_id"] for ann in coco["annotations"])
                     imgs_without_anns = [
                         img["file_name"]
                         for img in coco["images"]
-                        if not any(
-                            ann["image_id"] == img["id"] for ann in coco["annotations"]
-                        )
+                        if ann_counts.get(img["id"], 0) == 0
                     ]
                     if len(imgs_without_anns) > 0:
                         raise Exception(
